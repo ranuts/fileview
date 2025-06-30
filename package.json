@@ -8,7 +8,11 @@
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chaxus/ran"
+    "url": "git+https://github.com/ranuts/fileview"
+  },
+  "author": "chaxus",
+  "engines": {
+    "node": ">=23.10.0"
   },
   "scripts": {
     "dev": "vite --host",
@@ -59,7 +63,6 @@
     }
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "devDependencies": {
     "@babel/core": "^7.27.1",
