@@ -1,5 +1,5 @@
 {
-  "name": "fileview",
+  "name": "@ranui/preview",
   "version": "0.0.1-alpha-1",
   "description": "ranui preview",
   "main": "dist/umd/index.umd.cjs",
