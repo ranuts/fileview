@@ -1,0 +1,23 @@
+# npm
+node_modules
+package-lock.json
+npminstall-debug.log
+# common
+.temp
+cache
+# mac
+.DS_Store
+# eslint
+.eslintcache
+# vite
+vite.config.ts.timestamp*
+config.ts.timestamp*
+dist
+# ranui
+/test-results/
+/playwright-report/
+/playwright/.cache/
+# jscpd
+report
+# tesseract
+*.traineddata
