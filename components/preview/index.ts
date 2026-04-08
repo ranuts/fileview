@@ -255,9 +255,11 @@ async function Custom() {
       };
       onError = () => {
         this._loadingElement?.remove();
+        this.dispatchEvent(new CustomEvent('error', { bubbles: true, composed: true }));
       };
       onLoad = () => {
         this._loadingElement?.remove();
+        this.dispatchEvent(new CustomEvent('load', { bubbles: true, composed: true }));
       };
       handleFile = async (file: string | File) => {
         try {
