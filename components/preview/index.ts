@@ -1,9 +1,12 @@
-import { Client, MessageCodec, create, noop } from 'ranuts/utils';
+import { Client, MessageCodec, noop } from 'ranuts/utils';
 import { DOCX, PDF, PPTX, XLS, XLSX } from '@/components/preview/constant';
 import type { BaseReturn, RenderOptions } from '@/components/preview/types';
 import less from './index.less?inline';
+import { ButtonBuilder, Div, Style, View } from 'ranui/builder';
 import 'ranui/message';
 import 'ranui/icon';
+import 'ranui/loading';
+import 'ranui/progress';
 
 const message = window.message;
 
@@ -119,7 +122,7 @@ async function Custom() {
         return ['src', 'closeable'];
       }
       previewContextPdf?: HTMLDivElement;
-      _loadingText?: HTMLDivElement;
+      _loadingProgress?: HTMLElement;
       previewIframe?: HTMLIFrameElement;
       preview?: HTMLElement | null;
       previewContext?: HTMLDivElement;
@@ -128,6 +131,8 @@ async function Custom() {
       _loadingElement?: HTMLDivElement;
       _iframe?: HTMLIFrameElement;
       _editorWindow?: Window;
+      _closeButton?: HTMLElement;
+      _lastFocused?: HTMLElement | null;
       constructor() {
         super();
         this._div = document.createElement('div');
@@ -164,32 +169,28 @@ async function Custom() {
         if (value) this.setAttribute('baseUrl', value);
       }
       createLoading = () => {
-        this._loadingElement = document.createElement('div');
-        this._loadingElement.setAttribute('class', 'r-preview-loading');
-        const icon = document.createElement('r-icon');
-        icon.setAttribute('name', 'loading');
-        icon.setAttribute('size', '100');
-        icon.setAttribute('color', '#1E90FF');
-        icon.setAttribute('spin', '');
-        this._loadingText = document.createElement('div');
-        this._loadingElement.appendChild(icon);
-        this._loadingText.setAttribute('class', 'r-preview-loading-text');
-        this._loadingElement.appendChild(this._loadingText);
+        this._loadingProgress = View('r-progress')
+          .attr('percent', '0')
+          .attr('type', 'line')
+          .role('progressbar')
+          .aria('valuemin', '0')
+          .aria('valuemax', '100')
+          .aria('valuenow', '0')
+          .build();
+        this._loadingElement = Div()
+          .class('r-preview-loading')
+          .role('status')
+          .aria('live', 'polite')
+          .label('Loading file preview')
+          .children(View('r-loading').attr('name', 'circle').ariaHidden(true), this._loadingProgress)
+          .build();
         return this._loadingElement;
       };
       onProgress = (event: ProgressEvent<EventTarget>) => {
-        const num = (event.loaded / event.total) * 100;
-        const progress = Math.min(99, num).toFixed(2) + '%';
-        if (this._loadingText && this._loadingElement) {
-          this._loadingText.innerText = `Loading ${progress}`;
-          if (num >= 100) {
-            setTimeout(() => {
-              if (this._loadingText) {
-                this._loadingText.innerText = `Loading...`;
-              }
-            }, 300);
-          }
-        }
+        if (!event.total) return;
+        const num = Math.min(99, (event.loaded / event.total) * 100);
+        this._loadingProgress?.setAttribute('percent', num.toFixed(2));
+        this._loadingProgress?.setAttribute('aria-valuenow', String(Math.round(num)));
       };
       onError = () => {
         this.preview?.removeChild(this._loadingElement!);
@@ -242,7 +243,27 @@ async function Custom() {
           if (this.previewContextPdf && this.previewContext) {
             this.previewContext.removeChild(this.previewContextPdf);
           }
+          document.removeEventListener('keydown', this.handleKeydown);
+          // 关闭后把焦点交还给触发元素，符合无障碍规范
+          this._lastFocused?.focus?.();
         }
+      };
+      // Esc 关闭预览（模态框无障碍要求）
+      handleKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') this.closePreview();
+      };
+      // 键盘（Enter/Space）触发预览
+      handleTriggerKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.showPreview();
+        }
+      };
+      // 打开预览时：记录当前焦点、监听 Esc、把焦点移入对话框
+      openA11y = () => {
+        this._lastFocused = document.activeElement as HTMLElement | null;
+        document.addEventListener('keydown', this.handleKeydown);
+        requestAnimationFrame(() => this._closeButton?.focus());
       };
       showPreview = () => {
         if (this.src) {
@@ -252,59 +273,68 @@ async function Custom() {
             if (this.previewContextPdf && this.previewContext?.contains(this.previewContextPdf)) {
               this.previewContext.removeChild(this.previewContextPdf);
             }
-            this.previewContextPdf = document.createElement('div');
-            this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
+            this.previewContextPdf = Div().class('r-preview-context-pdf').build();
             this.previewContext?.appendChild(this.previewContextPdf);
             this._loadingElement?.style.setProperty('display', 'block');
           } else {
             this.preliminary();
           }
+          this.openA11y();
           this.handleFile(this.src);
         }
       };
       preliminary = () => {
-        this.preview = document.createElement('div');
-        this.preview.setAttribute('class', 'r-preview-mask');
-        this.preview.setAttribute('id', 'r-preview-mask');
-        const previewOption = document.createElement('div');
-        previewOption.setAttribute('class', 'r-preview-options');
+        const previewOption = Div().class('r-preview-options');
         if (this.closeable !== 'false') {
-          const previewCloseButton = document.createElement('r-icon');
-          previewCloseButton.setAttribute('class', 'r-preview-options-close');
-          previewCloseButton.setAttribute('name', 'close-circle-fill');
-          previewCloseButton.setAttribute('size', '40');
-          previewCloseButton.addEventListener('click', this.closePreview);
-          previewOption.appendChild(previewCloseButton);
+          // 用原生 button 包裹图标：天然可聚焦、Enter/Space 可激活、语义为按钮
+          this._closeButton = ButtonBuilder()
+            .class('r-preview-options-close')
+            .attr('type', 'button')
+            .label('Close preview')
+            .on('click', this.closePreview)
+            .children(View('r-icon').attr('name', 'close-circle-fill').attr('size', '40').ariaHidden(true))
+            .build();
+          previewOption.children(this._closeButton);
         }
-        const previewContain = document.createElement('div');
-        previewContain.setAttribute('class', 'r-preview-contain');
-        this.previewContext = document.createElement('div');
-        this.previewContext.setAttribute('class', 'r-preview-context');
-        this.previewContextPdf = document.createElement('div');
-        this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
-        this.previewContext.appendChild(this.previewContextPdf);
-        this.previewIframe = document.createElement('iframe');
-        this.previewIframe.setAttribute('src', this.baseUrl);
-        this.previewIframe.setAttribute('style', 'display: none;');
-        this.previewIframe.style.setProperty('margin-bottom', '30px');
-        // 添加权限策略设置，避免权限策略违规警告
-        this.previewIframe.setAttribute('allow', 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation');
-        this.previewIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
-        this.previewContext.appendChild(this.previewIframe);
-        previewContain.appendChild(this.previewContext);
-        this.preview.appendChild(previewOption);
+        this.previewContextPdf = Div().class('r-preview-context-pdf').build();
+        this.previewIframe = View<HTMLIFrameElement>('iframe')
+          .attr('src', this.baseUrl)
+          .attr('title', 'Document preview')
+          .style({ display: 'none', 'margin-bottom': '30px' })
+          // 添加权限策略设置，避免权限策略违规警告
+          .attr('allow', 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation')
+          .attr('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals')
+          .build();
+        this.previewContext = Div()
+          .class('r-preview-context')
+          .children(this.previewContextPdf, this.previewIframe)
+          .build();
         this._loadingElement = this.createLoading();
-        this.preview.appendChild(this._loadingElement);
-        this.preview?.appendChild(previewContain);
-        this.preview.style.setProperty('display', 'none');
+        this.preview = Div()
+          .class('r-preview-mask')
+          .id('r-preview-mask')
+          .role('dialog')
+          .attr('aria-modal', 'true')
+          .label('File preview')
+          .style('display', 'none')
+          .children(previewOption, this._loadingElement, Div().class('r-preview-contain').children(this.previewContext))
+          .build();
         document.body.appendChild(this.preview);
       };
       connectedCallback() {
         this.preliminary();
+        // 让宿主元素可聚焦并支持键盘触发，符合无障碍规范
+        if (!this.hasAttribute('role')) this.setAttribute('role', 'button');
+        if (!this.hasAttribute('tabindex')) this.setAttribute('tabindex', '0');
+        if (!this.hasAttribute('aria-label')) this.setAttribute('aria-label', this.label || 'Preview file');
+        this.setAttribute('aria-haspopup', 'dialog');
         this.addEventListener('click', this.showPreview);
+        this.addEventListener('keydown', this.handleTriggerKeydown);
       }
       disconnectedCallback() {
         this.removeEventListener('click', this.showPreview);
+        this.removeEventListener('keydown', this.handleTriggerKeydown);
+        document.removeEventListener('keydown', this.handleKeydown);
         this.preview && document.body.removeChild(this.preview);
       }
       attributeChangedCallback(name: string, oldValue: string, newValue: string) {
@@ -318,8 +348,8 @@ async function Custom() {
     }
     if (typeof document !== 'undefined' && !customElements.get('r-preview')) {
       customElements.define('r-preview', CustomElement);
-      const style = create('style').setTextContent(less);
-      document.body.appendChild(style.element);
+      const style = Style().text(less).build();
+      document.body.appendChild(style);
     }
   }
 }
