@@ -1,9 +1,10 @@
 import path, { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import type { BuildOptions, PluginOption, UserConfig } from 'vite';
+import type { BuildOptions, PluginOption, Rollup, UserConfig } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
-import type { RollupOptions } from 'rollup';
+
+type RollupOptions = Rollup.RollupOptions;
 import { babel } from '@rollup/plugin-babel';
 import loadStyle from './plugins/load-style';
 import { PORT } from './build/config';
@@ -26,13 +27,7 @@ const chunkOptimization: Partial<chunkOptimization> = {
   reportCompressedSize: false,
   rollupOptions: {
     external: ['react', 'react-dom', 'vue'],
-    output: {
-      experimentalMinChunkSize: 500,
-    },
-    treeshake: {
-      preset: 'recommended',
-      manualPureFunctions: ['console.log'],
-    },
+    treeshake: true,
   },
   minify: 'terser',
 };
