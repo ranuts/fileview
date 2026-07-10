@@ -157,6 +157,7 @@ async function Custom() {
       _loadingBadge?: HTMLSpanElement;
       _loadingName?: HTMLSpanElement;
       _loadingFill?: HTMLDivElement;
+      _loadingBar?: HTMLDivElement;
       _loadingStatus?: HTMLSpanElement;
       _loadingPct?: HTMLSpanElement;
       previewIframe?: HTMLIFrameElement;
@@ -168,6 +169,9 @@ async function Custom() {
       _loadingElement?: HTMLDivElement;
       _iframe?: HTMLIFrameElement;
       _editorWindow?: Window;
+      _closeButton?: HTMLButtonElement;
+      _lastFocused?: HTMLElement | null;
+      _focusFrame?: number;
       constructor() {
         super();
         this.preview = document.getElementById('r-preview-mask');
@@ -206,14 +210,25 @@ async function Custom() {
         this._loadingFill = Div().class('r-preview-loading-bar-fill').build();
         this._loadingStatus = Span().class('r-preview-loading-status').build();
         this._loadingPct = Span().class('r-preview-loading-pct').build();
+        this._loadingBar = Div()
+          .class('r-preview-loading-bar')
+          .attrs({
+            role: 'progressbar',
+            'aria-label': 'Loading file preview',
+            'aria-valuemin': '0',
+            'aria-valuemax': '100',
+          })
+          .children(this._loadingFill)
+          .build();
         this._loadingElement = Div()
           .class('r-preview-loading')
+          .attrs({ role: 'status', 'aria-live': 'polite', 'aria-label': 'Loading file preview' })
           .children(
             Div()
               .class('r-preview-loading-card')
               .children(
                 Div().class('r-preview-loading-head').children(this._loadingBadge, this._loadingName),
-                Div().class('r-preview-loading-bar').children(this._loadingFill),
+                this._loadingBar,
                 Div().class('r-preview-loading-foot').children(this._loadingStatus, this._loadingPct),
               ),
           )
@@ -237,9 +252,11 @@ async function Custom() {
         this._loadingStatus.textContent = status;
         if (percent === null) {
           this._loadingElement.classList.add('is-indeterminate');
+          this._loadingBar?.removeAttribute('aria-valuenow');
           this._loadingPct.textContent = '';
         } else {
           this._loadingElement.classList.remove('is-indeterminate');
+          this._loadingBar?.setAttribute('aria-valuenow', String(Math.round(percent)));
           this._loadingFill.style.setProperty('width', `${percent}%`);
           this._loadingPct.textContent = `${Math.round(percent)}%`;
         }
@@ -311,10 +328,32 @@ async function Custom() {
           Client.removeAll();
           this.previewIframe?.style.setProperty('display', 'none');
           this.preview.style.setProperty('display', 'none');
-          if (this.previewContextPdf && this.previewContext) {
+          if (this.previewContextPdf && this.previewContext?.contains(this.previewContextPdf)) {
             this.previewContext.removeChild(this.previewContextPdf);
           }
+          document.removeEventListener('keydown', this.handleKeydown);
+          if (this._focusFrame !== undefined) cancelAnimationFrame(this._focusFrame);
+          this._lastFocused?.focus();
         }
+      };
+      handleKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') this.closePreview();
+      };
+      handleTriggerKeydown = (event: KeyboardEvent) => {
+        // Nested native controls already activate through their click event.
+        if (event.target !== this) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.showPreview();
+        }
+      };
+      openA11y = () => {
+        if (!this.preview?.contains(document.activeElement)) {
+          this._lastFocused = document.activeElement as HTMLElement | null;
+        }
+        document.addEventListener('keydown', this.handleKeydown);
+        if (this._focusFrame !== undefined) cancelAnimationFrame(this._focusFrame);
+        this._focusFrame = requestAnimationFrame(() => (this._closeButton || this.preview)?.focus());
       };
       showPreview = () => {
         if (this.src) {
@@ -331,6 +370,7 @@ async function Custom() {
           } else {
             this.preliminary();
           }
+          this.openA11y();
           this.handleFile(this.src);
         }
       };
@@ -339,6 +379,7 @@ async function Custom() {
         // 添加权限策略设置，避免权限策略违规警告
         this.previewIframe = View<HTMLIFrameElement>('iframe')
           .attrs({
+            title: 'Document preview',
             allow: 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation',
             sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
           })
@@ -352,21 +393,31 @@ async function Custom() {
           .class('r-preview-context')
           .children(this.previewContextPdf, this.previewIframe)
           .build();
+        this._closeButton =
+          this.closeable !== 'false'
+            ? View<HTMLButtonElement>('button')
+                .class('r-preview-options-close')
+                .attrs({ type: 'button', 'aria-label': 'Close preview' })
+                .on('click', this.closePreview)
+                .children(
+                  View('r-icon').attrs({
+                    name: 'close-circle-fill',
+                    size: '36',
+                    color: '#ffffff',
+                    'aria-hidden': 'true',
+                  }),
+                )
+                .build()
+            : undefined;
         this.preview = Div()
           .class('r-preview-mask')
           .id('r-preview-mask')
+          .attrs({ role: 'dialog', 'aria-modal': 'true', 'aria-label': 'File preview', tabindex: '-1' })
           .style('display', 'none')
           .children(
             Div()
               .class('r-preview-options')
-              .children(
-                this.closeable !== 'false'
-                  ? View('r-icon')
-                      .class('r-preview-options-close')
-                      .attrs({ name: 'close-circle-fill', size: '36', color: '#ffffff' })
-                      .on('click', this.closePreview)
-                  : null,
-              ),
+              .children(this._closeButton || null),
             this.createLoading(),
             Div().class('r-preview-contain').children(this.previewContext),
           )
@@ -375,10 +426,18 @@ async function Custom() {
       };
       connectedCallback() {
         this.preliminary();
+        if (!this.hasAttribute('role')) this.setAttribute('role', 'button');
+        if (!this.hasAttribute('tabindex')) this.setAttribute('tabindex', '0');
+        if (!this.hasAttribute('aria-label')) this.setAttribute('aria-label', this.label || 'Preview file');
+        this.setAttribute('aria-haspopup', 'dialog');
         this.addEventListener('click', this.showPreview);
+        this.addEventListener('keydown', this.handleTriggerKeydown);
       }
       disconnectedCallback() {
         this.removeEventListener('click', this.showPreview);
+        this.removeEventListener('keydown', this.handleTriggerKeydown);
+        document.removeEventListener('keydown', this.handleKeydown);
+        if (this._focusFrame !== undefined) cancelAnimationFrame(this._focusFrame);
         this.preview && document.body.removeChild(this.preview);
       }
       attributeChangedCallback(name: string, oldValue: string, newValue: string) {
