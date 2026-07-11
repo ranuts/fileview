@@ -1,4 +1,5 @@
 import { isSafari } from 'ranuts/utils';
+import { View } from 'ranui/builder';
 import { loadScript } from '@/utils/index';
 // copy from: https://github.com/mozilla/pdfjs-dist/blob/master/build/pdf.min.js
 import PDF_JS from '@/assets/js/pdf.min.js?raw';
@@ -54,8 +55,7 @@ export class PdfPreview {
           // safari 上有兼容性问题
           const scale = isSafari() ? Math.min(window.devicePixelRatio, 2) : window.devicePixelRatio || 1;
           const viewport = page.getViewport({ scale });
-          const canvas = document.createElement('canvas');
-          canvas.style.setProperty('margin', '0 auto');
+          const canvas = View<HTMLCanvasElement>('canvas').style('margin', '0 auto').build();
           // this.dom.innerHTML = ''
           this.dom.appendChild(canvas);
           const context = canvas.getContext('2d');

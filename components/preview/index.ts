@@ -1,4 +1,5 @@
-import { Client, MessageCodec, create, noop } from 'ranuts/utils';
+import { Client, MessageCodec, noop } from 'ranuts/utils';
+import { Div, Slot, Span, Style, View } from 'ranui/builder';
 import { DOCX, PDF, PPTX, XLS, XLSX } from '@/components/preview/constant';
 import type { BaseReturn, RenderOptions } from '@/components/preview/types';
 import less from './index.less?inline';
@@ -169,12 +170,9 @@ async function Custom() {
       _editorWindow?: Window;
       constructor() {
         super();
-        this._div = document.createElement('div');
         this.preview = document.getElementById('r-preview-mask');
-        this._slot = document.createElement('slot');
-        this._div.appendChild(this._slot);
-        this._slot.setAttribute('class', 'r-preview-slot');
-        this._div.setAttribute('class', 'r-preview');
+        this._slot = Slot().class('r-preview-slot').build();
+        this._div = Div().class('r-preview').children(this._slot).build();
         const shadowRoot = this.attachShadow({ mode: 'closed' });
         shadowRoot.appendChild(this._div);
       }
@@ -203,35 +201,23 @@ async function Custom() {
         if (value) this.setAttribute('baseUrl', value);
       }
       createLoading = () => {
-        this._loadingElement = document.createElement('div');
-        this._loadingElement.setAttribute('class', 'r-preview-loading');
-        const card = document.createElement('div');
-        card.setAttribute('class', 'r-preview-loading-card');
-        const head = document.createElement('div');
-        head.setAttribute('class', 'r-preview-loading-head');
-        this._loadingBadge = document.createElement('span');
-        this._loadingBadge.setAttribute('class', 'r-preview-loading-badge');
-        this._loadingName = document.createElement('span');
-        this._loadingName.setAttribute('class', 'r-preview-loading-name');
-        head.appendChild(this._loadingBadge);
-        head.appendChild(this._loadingName);
-        const bar = document.createElement('div');
-        bar.setAttribute('class', 'r-preview-loading-bar');
-        this._loadingFill = document.createElement('div');
-        this._loadingFill.setAttribute('class', 'r-preview-loading-bar-fill');
-        bar.appendChild(this._loadingFill);
-        const foot = document.createElement('div');
-        foot.setAttribute('class', 'r-preview-loading-foot');
-        this._loadingStatus = document.createElement('span');
-        this._loadingStatus.setAttribute('class', 'r-preview-loading-status');
-        this._loadingPct = document.createElement('span');
-        this._loadingPct.setAttribute('class', 'r-preview-loading-pct');
-        foot.appendChild(this._loadingStatus);
-        foot.appendChild(this._loadingPct);
-        card.appendChild(head);
-        card.appendChild(bar);
-        card.appendChild(foot);
-        this._loadingElement.appendChild(card);
+        this._loadingBadge = Span().class('r-preview-loading-badge').build();
+        this._loadingName = Span().class('r-preview-loading-name').build();
+        this._loadingFill = Div().class('r-preview-loading-bar-fill').build();
+        this._loadingStatus = Span().class('r-preview-loading-status').build();
+        this._loadingPct = Span().class('r-preview-loading-pct').build();
+        this._loadingElement = Div()
+          .class('r-preview-loading')
+          .children(
+            Div()
+              .class('r-preview-loading-card')
+              .children(
+                Div().class('r-preview-loading-head').children(this._loadingBadge, this._loadingName),
+                Div().class('r-preview-loading-bar').children(this._loadingFill),
+                Div().class('r-preview-loading-foot').children(this._loadingStatus, this._loadingPct),
+              ),
+          )
+          .build();
         this.resetLoading();
         return this._loadingElement;
       };
@@ -336,8 +322,7 @@ async function Custom() {
             if (this.previewContextPdf && this.previewContext?.contains(this.previewContextPdf)) {
               this.previewContext.removeChild(this.previewContextPdf);
             }
-            this.previewContextPdf = document.createElement('div');
-            this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
+            this.previewContextPdf = Div().class('r-preview-context-pdf').build();
             this.previewContext?.appendChild(this.previewContextPdf);
             this.resetLoading();
             this._loadingElement?.style.setProperty('display', 'flex');
@@ -348,50 +333,42 @@ async function Custom() {
         }
       };
       preliminary = () => {
-        this.preview = document.createElement('div');
-        this.preview.setAttribute('class', 'r-preview-mask');
-        this.preview.setAttribute('id', 'r-preview-mask');
-        const previewOption = document.createElement('div');
-        previewOption.setAttribute('class', 'r-preview-options');
-        if (this.closeable !== 'false') {
-          const previewCloseButton = document.createElement('r-icon');
-          previewCloseButton.setAttribute('class', 'r-preview-options-close');
-          previewCloseButton.setAttribute('name', 'close-circle-fill');
-          previewCloseButton.setAttribute('size', '36');
-          previewCloseButton.setAttribute('color', '#ffffff');
-          previewCloseButton.addEventListener('click', this.closePreview);
-          previewOption.appendChild(previewCloseButton);
-        }
-        const previewContain = document.createElement('div');
-        previewContain.setAttribute('class', 'r-preview-contain');
-        this.previewContext = document.createElement('div');
-        this.previewContext.setAttribute('class', 'r-preview-context');
-        this.previewContextPdf = document.createElement('div');
-        this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
-        this.previewContext.appendChild(this.previewContextPdf);
-        this.previewIframe = document.createElement('iframe');
+        this.previewContextPdf = Div().class('r-preview-context-pdf').build();
+        // 添加权限策略设置，避免权限策略违规警告
+        this.previewIframe = View<HTMLIFrameElement>('iframe')
+          .attrs({
+            allow: 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation',
+            sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
+          })
+          .style({ display: 'none', 'margin-bottom': '30px' })
+          .build();
         this._iframeReady = new Promise((resolve) => {
           this.previewIframe!.addEventListener('load', () => resolve(), { once: true });
         });
         this.previewIframe.setAttribute('src', this.baseUrl);
-        this.previewIframe.setAttribute('style', 'display: none;');
-        this.previewIframe.style.setProperty('margin-bottom', '30px');
-        // 添加权限策略设置，避免权限策略违规警告
-        this.previewIframe.setAttribute(
-          'allow',
-          'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation',
-        );
-        this.previewIframe.setAttribute(
-          'sandbox',
-          'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
-        );
-        this.previewContext.appendChild(this.previewIframe);
-        previewContain.appendChild(this.previewContext);
-        this.preview.appendChild(previewOption);
-        this._loadingElement = this.createLoading();
-        this.preview.appendChild(this._loadingElement);
-        this.preview?.appendChild(previewContain);
-        this.preview.style.setProperty('display', 'none');
+        this.previewContext = Div()
+          .class('r-preview-context')
+          .children(this.previewContextPdf, this.previewIframe)
+          .build();
+        this.preview = Div()
+          .class('r-preview-mask')
+          .id('r-preview-mask')
+          .style('display', 'none')
+          .children(
+            Div()
+              .class('r-preview-options')
+              .children(
+                this.closeable !== 'false'
+                  ? View('r-icon')
+                      .class('r-preview-options-close')
+                      .attrs({ name: 'close-circle-fill', size: '36', color: '#ffffff' })
+                      .on('click', this.closePreview)
+                  : null,
+              ),
+            this.createLoading(),
+            Div().class('r-preview-contain').children(this.previewContext),
+          )
+          .build();
         document.body.appendChild(this.preview);
       };
       connectedCallback() {
@@ -413,8 +390,7 @@ async function Custom() {
     }
     if (typeof document !== 'undefined' && !customElements.get('r-preview')) {
       customElements.define('r-preview', CustomElement);
-      const style = create('style').setTextContent(less);
-      document.body.appendChild(style.element);
+      document.body.appendChild(Style().text(less).build());
     }
   }
 }
