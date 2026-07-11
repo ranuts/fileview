@@ -153,7 +153,11 @@ async function Custom() {
         return ['src', 'closeable'];
       }
       previewContextPdf?: HTMLDivElement;
-      _loadingText?: HTMLDivElement;
+      _loadingBadge?: HTMLSpanElement;
+      _loadingName?: HTMLSpanElement;
+      _loadingFill?: HTMLDivElement;
+      _loadingStatus?: HTMLSpanElement;
+      _loadingPct?: HTMLSpanElement;
       previewIframe?: HTMLIFrameElement;
       _iframeReady?: Promise<void>;
       preview?: HTMLElement | null;
@@ -201,36 +205,73 @@ async function Custom() {
       createLoading = () => {
         this._loadingElement = document.createElement('div');
         this._loadingElement.setAttribute('class', 'r-preview-loading');
-        const icon = document.createElement('r-icon');
-        icon.setAttribute('name', 'loading');
-        icon.setAttribute('size', '100');
-        icon.setAttribute('color', '#1E90FF');
-        icon.setAttribute('spin', '');
-        this._loadingText = document.createElement('div');
-        this._loadingElement.appendChild(icon);
-        this._loadingText.setAttribute('class', 'r-preview-loading-text');
-        this._loadingElement.appendChild(this._loadingText);
+        const card = document.createElement('div');
+        card.setAttribute('class', 'r-preview-loading-card');
+        const head = document.createElement('div');
+        head.setAttribute('class', 'r-preview-loading-head');
+        this._loadingBadge = document.createElement('span');
+        this._loadingBadge.setAttribute('class', 'r-preview-loading-badge');
+        this._loadingName = document.createElement('span');
+        this._loadingName.setAttribute('class', 'r-preview-loading-name');
+        head.appendChild(this._loadingBadge);
+        head.appendChild(this._loadingName);
+        const bar = document.createElement('div');
+        bar.setAttribute('class', 'r-preview-loading-bar');
+        this._loadingFill = document.createElement('div');
+        this._loadingFill.setAttribute('class', 'r-preview-loading-bar-fill');
+        bar.appendChild(this._loadingFill);
+        const foot = document.createElement('div');
+        foot.setAttribute('class', 'r-preview-loading-foot');
+        this._loadingStatus = document.createElement('span');
+        this._loadingStatus.setAttribute('class', 'r-preview-loading-status');
+        this._loadingPct = document.createElement('span');
+        this._loadingPct.setAttribute('class', 'r-preview-loading-pct');
+        foot.appendChild(this._loadingStatus);
+        foot.appendChild(this._loadingPct);
+        card.appendChild(head);
+        card.appendChild(bar);
+        card.appendChild(foot);
+        this._loadingElement.appendChild(card);
+        this.resetLoading();
         return this._loadingElement;
       };
-      onProgress = (event: ProgressEvent<EventTarget>) => {
-        const num = (event.loaded / event.total) * 100;
-        const progress = Math.min(99, num).toFixed(2) + '%';
-        if (this._loadingText && this._loadingElement) {
-          this._loadingText.innerText = `Loading ${progress}`;
-          if (num >= 100) {
-            setTimeout(() => {
-              if (this._loadingText) {
-                this._loadingText.innerText = `Loading...`;
-              }
-            }, 300);
-          }
+      resetLoading = () => {
+        this.setLoadingMeta('');
+        this.setLoadingProgress(0, 'Downloading…');
+      };
+      setLoadingMeta = (name: string) => {
+        if (!this._loadingBadge || !this._loadingName) return;
+        const ext = name.includes('.') ? name.split('.').pop()!.toUpperCase() : '';
+        this._loadingBadge.textContent = ext || 'FILE';
+        this._loadingName.textContent = name || 'Loading file…';
+      };
+      // percent: 0–100 drives the bar; null switches to the indeterminate shimmer.
+      setLoadingProgress = (percent: number | null, status: string) => {
+        if (!this._loadingElement || !this._loadingFill || !this._loadingStatus || !this._loadingPct) return;
+        this._loadingStatus.textContent = status;
+        if (percent === null) {
+          this._loadingElement.classList.add('is-indeterminate');
+          this._loadingPct.textContent = '';
+        } else {
+          this._loadingElement.classList.remove('is-indeterminate');
+          this._loadingFill.style.setProperty('width', `${percent}%`);
+          this._loadingPct.textContent = `${Math.round(percent)}%`;
         }
       };
+      onProgress = (event: ProgressEvent<EventTarget>) => {
+        // No Content-Length → no meaningful total; fall back to the shimmer.
+        if (!event.total) {
+          this.setLoadingProgress(null, 'Downloading…');
+          return;
+        }
+        const num = Math.min(99, (event.loaded / event.total) * 100);
+        this.setLoadingProgress(num, 'Downloading…');
+      };
       onError = () => {
-        this.preview?.removeChild(this._loadingElement!);
+        this._loadingElement?.remove();
       };
       onLoad = () => {
-        this.preview?.removeChild(this._loadingElement!);
+        this._loadingElement?.remove();
       };
       handleFile = async (file: string | File) => {
         try {
@@ -250,6 +291,8 @@ async function Custom() {
           }
           if (file instanceof File) {
             const { type } = file;
+            this.setLoadingMeta(file.name);
+            this.setLoadingProgress(null, 'Preparing preview…');
             const handler = renderFileMap.get(type);
             if (handler && this.previewContext) {
               this.previewContext.style.setProperty('width', '100%');
@@ -296,7 +339,8 @@ async function Custom() {
             this.previewContextPdf = document.createElement('div');
             this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
             this.previewContext?.appendChild(this.previewContextPdf);
-            this._loadingElement?.style.setProperty('display', 'block');
+            this.resetLoading();
+            this._loadingElement?.style.setProperty('display', 'flex');
           } else {
             this.preliminary();
           }
@@ -313,7 +357,8 @@ async function Custom() {
           const previewCloseButton = document.createElement('r-icon');
           previewCloseButton.setAttribute('class', 'r-preview-options-close');
           previewCloseButton.setAttribute('name', 'close-circle-fill');
-          previewCloseButton.setAttribute('size', '40');
+          previewCloseButton.setAttribute('size', '36');
+          previewCloseButton.setAttribute('color', '#ffffff');
           previewCloseButton.addEventListener('click', this.closePreview);
           previewOption.appendChild(previewCloseButton);
         }
