@@ -77,7 +77,7 @@ import { preview } from '@ranui/preview';
 |------|------|--------|------|
 | `src` | string | - | 要预览的文件 URL 或 blob URL |
 | `closeable` | boolean | false | 是否显示关闭按钮 |
-| `baseUrl` | string | 'https://ranuts.github.io/document' | Office 文档渲染的基础 URL |
+| `baseUrl` | string | 'https://edit.chaxus.com' | Office 文档渲染的基础 URL |
 | `label` | string | - | 预览的自定义标签 |
 
 #### 方法
@@ -93,6 +93,14 @@ import { preview } from '@ranui/preview';
 |------|------|
 | `load` | 文件成功加载时触发 |
 | `error` | 文件加载失败时触发 |
+
+#### 迁移说明（≤ 0.0.1-alpha-3 的旧版本）
+
+旧版本的 `baseUrl` 默认指向 `https://ranuts.github.io/document`，该地址现在只剩一个跳转页——iframe 跨域跳转后 postMessage 会被浏览器丢弃，Office 预览会一直停在加载中。如果暂时无法升级，请显式设置属性：
+
+```html
+<r-preview src="..." baseUrl="https://edit.chaxus.com"></r-preview>
+```
 
 ### 支持的文件类型
 

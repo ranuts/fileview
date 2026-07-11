@@ -77,7 +77,7 @@ import { preview } from '@ranui/preview';
 |-----------|------|---------|-------------|
 | `src` | string | - | File URL or blob URL to preview |
 | `closeable` | boolean | false | Whether to show close button |
-| `baseUrl` | string | 'https://ranuts.github.io/document' | Base URL for Office document rendering |
+| `baseUrl` | string | 'https://edit.chaxus.com' | Base URL for Office document rendering |
 | `label` | string | - | Custom label for the preview |
 
 #### Methods
@@ -93,6 +93,14 @@ import { preview } from '@ranui/preview';
 |-------|-------------|
 | `load` | Fired when file is successfully loaded |
 | `error` | Fired when file loading fails |
+
+#### Migration note (versions ≤ 0.0.1-alpha-3)
+
+Older versions default `baseUrl` to `https://ranuts.github.io/document`, which is now only a redirect page — Office preview silently hangs on loading because postMessage is dropped after the cross-origin redirect. If you cannot upgrade yet, set the attribute explicitly:
+
+```html
+<r-preview src="..." baseUrl="https://edit.chaxus.com"></r-preview>
+```
 
 ### Supported File Types
 

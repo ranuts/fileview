@@ -8,7 +8,7 @@ import 'ranui/icon';
 const message = window.message;
 
 
-const TARGET_ORIGIN = 'https://ranuts.github.io/document';
+const TARGET_ORIGIN = 'https://edit.chaxus.com';
 
 interface RequestUrlToArraybufferOption {
   responseType: XMLHttpRequestResponseType;
@@ -27,9 +27,12 @@ interface requestUrlToArraybufferReturn extends BaseReturn {
 
 const renderOffice = async (file: File, options: RenderOptions) => {
   try {
-    const { iframe, onLoad, dom, baseUrl } = options;
+    const { iframe, iframeReady, onLoad, dom, baseUrl } = options;
     dom?.style.setProperty('display', 'none');
     if (!iframe) return;
+    // The editor only attaches its message listener once its JS runs; chunks
+    // posted before the iframe finishes loading are silently lost (no retry).
+    await iframeReady;
     Client.removeAll();
     const { id } = Client.connect({
       targetOrigin: new URL(baseUrl || TARGET_ORIGIN).origin,
@@ -114,6 +117,33 @@ async function Custom() {
       [XLS, renderOffice],
     ]);
 
+    const EXT_MIME: Record<string, string> = {
+      pdf: PDF,
+      docx: DOCX,
+      pptx: PPTX,
+      xlsx: XLSX,
+      xls: XLS,
+    };
+
+    // XHR blobs carry no filename, and servers frequently mislabel Office
+    // extensions (empty, application/octet-stream, even text/xml) — both would
+    // silently fail the renderFileMap lookup, so only trust a Content-Type we
+    // can actually render and otherwise recover name/type from the URL.
+    const inferFileMeta = (src: string, data: Blob & { name?: string }): { name: string; type: string } => {
+      let name = data.name || '';
+      if (!name) {
+        try {
+          name = decodeURIComponent(new URL(src, window.location.href).pathname.split('/').pop() || '');
+        } catch {
+          name = '';
+        }
+      }
+      if (!name) name = 'file';
+      const ext = name.split('.').pop()?.toLowerCase() || '';
+      const type = renderFileMap.has(data.type) ? data.type : EXT_MIME[ext] || data.type || '';
+      return { name, type };
+    };
+
     class CustomElement extends HTMLElement {
       static get observedAttributes() {
         return ['src', 'closeable'];
@@ -121,6 +151,7 @@ async function Custom() {
       previewContextPdf?: HTMLDivElement;
       _loadingText?: HTMLDivElement;
       previewIframe?: HTMLIFrameElement;
+      _iframeReady?: Promise<void>;
       preview?: HTMLElement | null;
       previewContext?: HTMLDivElement;
       _slot: HTMLSlotElement;
@@ -200,13 +231,15 @@ async function Custom() {
       handleFile = async (file: string | File) => {
         try {
           if (typeof file === 'string') {
-            const { success, data, message } = await requestUrlToBuffer(file, {
+            const src = file;
+            const { success, data, message } = await requestUrlToBuffer(src, {
               onProgress: this.onProgress,
               onError: this.onError,
               responseType: 'blob',
             });
             if (success && data) {
-              file = new File([data], data.name, { type: data.type });
+              const { name, type } = inferFileMeta(src, data);
+              file = new File([data], name, { type });
             } else {
               warning(message);
             }
@@ -221,9 +254,13 @@ async function Custom() {
                 onError: this.onError,
                 onLoad: this.onLoad,
                 iframe: this.previewIframe,
+                iframeReady: this._iframeReady,
                 baseUrl: this.baseUrl,
               };
               handler(file, options);
+            } else {
+              warning(`Unsupported file type: ${type || '(unknown)'}`);
+              this.onError();
             }
           }
         } catch (error) {
@@ -284,6 +321,9 @@ async function Custom() {
         this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
         this.previewContext.appendChild(this.previewContextPdf);
         this.previewIframe = document.createElement('iframe');
+        this._iframeReady = new Promise((resolve) => {
+          this.previewIframe!.addEventListener('load', () => resolve(), { once: true });
+        });
         this.previewIframe.setAttribute('src', this.baseUrl);
         this.previewIframe.setAttribute('style', 'display: none;');
         this.previewIframe.style.setProperty('margin-bottom', '30px');
