@@ -33,28 +33,28 @@ yarn add @ranui/preview
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>File Preview Demo</title>
-</head>
-<body>
-  <input type="file" id="fileInput" />
-  <r-preview id="preview"></r-preview>
+  <head>
+    <title>File Preview Demo</title>
+  </head>
+  <body>
+    <input type="file" id="fileInput" />
+    <r-preview id="preview"></r-preview>
 
-  <script type="module">
-    import '@ranui/preview';
-    
-    const fileInput = document.getElementById('fileInput');
-    const preview = document.getElementById('preview');
-    
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        preview.setAttribute('src', url);
-      }
-    });
-  </script>
-</body>
+    <script type="module">
+      import '@ranui/preview';
+
+      const fileInput = document.getElementById('fileInput');
+      const preview = document.getElementById('preview');
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const url = URL.createObjectURL(file);
+          preview.setAttribute('src', url);
+        }
+      });
+    </script>
+  </body>
 </html>
 ```
 
@@ -73,30 +73,30 @@ import { preview } from '@ranui/preview';
 
 #### Attributes
 
-| Attribute | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `src` | string | - | File URL or blob URL to preview |
-| `closeable` | boolean | false | Whether to show close button |
-| `baseUrl` | string | 'https://edit.chaxus.com' | Base URL for Office document rendering |
-| `label` | string | - | Custom label for the preview |
+| Attribute   | Type    | Default                   | Description                            |
+| ----------- | ------- | ------------------------- | -------------------------------------- |
+| `src`       | string  | -                         | File URL or blob URL to preview        |
+| `closeable` | boolean | false                     | Whether to show close button           |
+| `baseUrl`   | string  | 'https://edit.chaxus.com' | Base URL for Office document rendering |
+| `label`     | string  | -                         | Custom label for the preview           |
 
 #### Methods
 
-| Method | Description |
-|--------|-------------|
-| `showPreview()` | Manually trigger preview display |
-| `closePreview()` | Close the preview modal |
+| Method           | Description                      |
+| ---------------- | -------------------------------- |
+| `showPreview()`  | Manually trigger preview display |
+| `closePreview()` | Close the preview modal          |
 
 #### Events
 
-| Event | Description |
-|-------|-------------|
-| `load` | Fired when file is successfully loaded |
-| `error` | Fired when file loading fails |
+| Event   | Description                            |
+| ------- | -------------------------------------- |
+| `load`  | Fired when file is successfully loaded |
+| `error` | Fired when file loading fails          |
 
 #### Migration note (versions ≤ 0.0.1-alpha-3)
 
-Older versions default `baseUrl` to `https://ranuts.github.io/document`, which is now only a redirect page — Office preview silently hangs on loading because postMessage is dropped after the cross-origin redirect. If you cannot upgrade yet, set the attribute explicitly:
+Older versions default `baseUrl` to `https://ranuts.github.io/document`, which is now only a redirect page — Office preview silently hangs on loading because postMessage is dropped after the cross-origin redirect. Upgrade to `0.1.0-alpha-1` or later; if you cannot upgrade yet, set the attribute explicitly:
 
 ```html
 <r-preview src="..." baseUrl="https://edit.chaxus.com"></r-preview>
@@ -107,7 +107,7 @@ Older versions default `baseUrl` to `https://ranuts.github.io/document`, which i
 - **PDF**: `application/pdf`
 - **Word**: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 - **PowerPoint**: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
-- **Excel**: 
+- **Excel**:
   - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (XLSX)
   - `application/vnd.ms-excel` (XLS)
 
@@ -172,4 +172,4 @@ AGPL-3.0 License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-If you encounter any issues or have questions, please [open an issue](https://github.com/ranuts/fileview/issues) on GitHub. 
+If you encounter any issues or have questions, please [open an issue](https://github.com/ranuts/fileview/issues) on GitHub.

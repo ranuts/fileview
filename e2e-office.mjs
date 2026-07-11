@@ -35,5 +35,10 @@ try {
 // Give the editor a few seconds to actually render the document, then screenshot.
 await page.waitForTimeout(12000);
 await page.screenshot({ path: new globalThis.URL('./e2e-office.png', import.meta.url).pathname, fullPage: false });
-console.log(log.filter((l) => !l.includes('vite')).slice(0, 15).join('\n'));
+console.log(
+  log
+    .filter((l) => !l.includes('vite'))
+    .slice(0, 15)
+    .join('\n'),
+);
 await browser.close();

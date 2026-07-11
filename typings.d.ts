@@ -29,7 +29,6 @@ interface PDFDocumentProxy {
   getPage: (x: number) => Promise<PDFPageProxy>;
 }
 
-
 declare global {
   interface Window {
     ranui: Partial<Ranui>;
@@ -55,7 +54,6 @@ interface BaseIntrinsicElements {
     closeable: boolean | string;
     baseUrl: string;
   };
-
 }
 namespace JSX {
   interface IntrinsicElements extends BaseIntrinsicElements {}

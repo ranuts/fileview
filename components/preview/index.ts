@@ -7,7 +7,6 @@ import 'ranui/icon';
 
 const message = window.message;
 
-
 const TARGET_ORIGIN = 'https://edit.chaxus.com';
 
 interface RequestUrlToArraybufferOption {
@@ -125,6 +124,8 @@ async function Custom() {
       xls: XLS,
     };
 
+    const MIME_EXT: Record<string, string> = Object.fromEntries(Object.entries(EXT_MIME).map(([e, m]) => [m, e]));
+
     // XHR blobs carry no filename, and servers frequently mislabel Office
     // extensions (empty, application/octet-stream, even text/xml) — both would
     // silently fail the renderFileMap lookup, so only trust a Content-Type we
@@ -141,6 +142,9 @@ async function Custom() {
       if (!name) name = 'file';
       const ext = name.split('.').pop()?.toLowerCase() || '';
       const type = renderFileMap.has(data.type) ? data.type : EXT_MIME[ext] || data.type || '';
+      // Blob URLs name the file after an extensionless UUID, but the editor
+      // detects the format from the extension — recover it from the MIME type.
+      if (!EXT_MIME[ext] && MIME_EXT[type]) name = `${name}.${MIME_EXT[type]}`;
       return { name, type };
     };
 
@@ -328,8 +332,14 @@ async function Custom() {
         this.previewIframe.setAttribute('style', 'display: none;');
         this.previewIframe.style.setProperty('margin-bottom', '30px');
         // 添加权限策略设置，避免权限策略违规警告
-        this.previewIframe.setAttribute('allow', 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation');
-        this.previewIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
+        this.previewIframe.setAttribute(
+          'allow',
+          'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation',
+        );
+        this.previewIframe.setAttribute(
+          'sandbox',
+          'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
+        );
         this.previewContext.appendChild(this.previewIframe);
         previewContain.appendChild(this.previewContext);
         this.preview.appendChild(previewOption);

@@ -33,28 +33,28 @@ yarn add @ranui/preview
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <title>文件预览演示</title>
-</head>
-<body>
-  <input type="file" id="fileInput" />
-  <r-preview id="preview"></r-preview>
+  <head>
+    <title>文件预览演示</title>
+  </head>
+  <body>
+    <input type="file" id="fileInput" />
+    <r-preview id="preview"></r-preview>
 
-  <script type="module">
-    import '@ranui/preview';
-    
-    const fileInput = document.getElementById('fileInput');
-    const preview = document.getElementById('preview');
-    
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        preview.setAttribute('src', url);
-      }
-    });
-  </script>
-</body>
+    <script type="module">
+      import '@ranui/preview';
+
+      const fileInput = document.getElementById('fileInput');
+      const preview = document.getElementById('preview');
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const url = URL.createObjectURL(file);
+          preview.setAttribute('src', url);
+        }
+      });
+    </script>
+  </body>
 </html>
 ```
 
@@ -73,30 +73,30 @@ import { preview } from '@ranui/preview';
 
 #### 属性
 
-| 属性 | 类型 | 默认值 | 描述 |
-|------|------|--------|------|
-| `src` | string | - | 要预览的文件 URL 或 blob URL |
-| `closeable` | boolean | false | 是否显示关闭按钮 |
-| `baseUrl` | string | 'https://edit.chaxus.com' | Office 文档渲染的基础 URL |
-| `label` | string | - | 预览的自定义标签 |
+| 属性        | 类型    | 默认值                    | 描述                         |
+| ----------- | ------- | ------------------------- | ---------------------------- |
+| `src`       | string  | -                         | 要预览的文件 URL 或 blob URL |
+| `closeable` | boolean | false                     | 是否显示关闭按钮             |
+| `baseUrl`   | string  | 'https://edit.chaxus.com' | Office 文档渲染的基础 URL    |
+| `label`     | string  | -                         | 预览的自定义标签             |
 
 #### 方法
 
-| 方法 | 描述 |
-|------|------|
-| `showPreview()` | 手动触发预览显示 |
-| `closePreview()` | 关闭预览模态框 |
+| 方法             | 描述             |
+| ---------------- | ---------------- |
+| `showPreview()`  | 手动触发预览显示 |
+| `closePreview()` | 关闭预览模态框   |
 
 #### 事件
 
-| 事件 | 描述 |
-|------|------|
-| `load` | 文件成功加载时触发 |
+| 事件    | 描述               |
+| ------- | ------------------ |
+| `load`  | 文件成功加载时触发 |
 | `error` | 文件加载失败时触发 |
 
 #### 迁移说明（≤ 0.0.1-alpha-3 的旧版本）
 
-旧版本的 `baseUrl` 默认指向 `https://ranuts.github.io/document`，该地址现在只剩一个跳转页——iframe 跨域跳转后 postMessage 会被浏览器丢弃，Office 预览会一直停在加载中。如果暂时无法升级，请显式设置属性：
+旧版本的 `baseUrl` 默认指向 `https://ranuts.github.io/document`，该地址现在只剩一个跳转页——iframe 跨域跳转后 postMessage 会被浏览器丢弃，Office 预览会一直停在加载中。请升级到 `0.1.0-alpha-1` 及以上；如果暂时无法升级，请显式设置属性：
 
 ```html
 <r-preview src="..." baseUrl="https://edit.chaxus.com"></r-preview>
@@ -107,7 +107,7 @@ import { preview } from '@ranui/preview';
 - **PDF**: `application/pdf`
 - **Word**: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
 - **PowerPoint**: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
-- **Excel**: 
+- **Excel**:
   - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (XLSX)
   - `application/vnd.ms-excel` (XLS)
 
@@ -172,4 +172,4 @@ AGPL-3.0 许可证 - 详情请查看 [LICENSE](LICENSE) 文件。
 
 ## 支持
 
-如果你遇到任何问题或有疑问，请在 GitHub 上[提交 issue](https://github.com/ranuts/fileview/issues)。 
+如果你遇到任何问题或有疑问，请在 GitHub 上[提交 issue](https://github.com/ranuts/fileview/issues)。

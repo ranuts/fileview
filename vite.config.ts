@@ -45,7 +45,6 @@ export const umd: BuildOptions = {
   },
 };
 
-
 export const es: BuildOptions = {
   ...chunkOptimization,
   lib: {

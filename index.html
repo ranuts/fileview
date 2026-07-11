@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary SEO -->
-    <title>
-      @ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer
-    </title>
+    <title>@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer</title>
     <meta
       name="description"
       content="A framework-free web component that renders PDF, DOCX, PPTX and XLSX right in the browser. One tag — <r-preview src>. No backend, no upload, embeddable in any iframe."
@@ -18,24 +16,13 @@
     />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="https://fileview.chaxus.com/" />
-    <meta
-      name="theme-color"
-      content="#0052cc"
-      media="(prefers-color-scheme: light)"
-    />
-    <meta
-      name="theme-color"
-      content="#090b0e"
-      media="(prefers-color-scheme: dark)"
-    />
+    <meta name="theme-color" content="#0052cc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#090b0e" media="(prefers-color-scheme: dark)" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="@ranui/preview" />
-    <meta
-      property="og:title"
-      content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer"
-    />
+    <meta property="og:title" content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer" />
     <meta
       property="og:description"
       content="One custom element that renders PDF, DOCX, PPTX and XLSX entirely on the client. No backend, no upload, embeddable in any iframe."
@@ -44,10 +31,7 @@
 
     <!-- Twitter (no hosted preview image, so use the compact summary card) -->
     <meta name="twitter:card" content="summary" />
-    <meta
-      name="twitter:title"
-      content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer"
-    />
+    <meta name="twitter:title" content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer" />
     <meta
       name="twitter:description"
       content="Framework-free <r-preview src> web component. Render PDF &amp; Office files client-side, embeddable in any iframe."
@@ -136,23 +120,15 @@
         --accent-ink: #ffffff;
         --accent-wash: #e9f0ff;
         --grid: rgba(0, 82, 204, 0.07);
-        --glow:
-          0 0 0 1px rgba(0, 82, 204, 0.14),
-          0 30px 80px -34px rgba(0, 82, 204, 0.3);
+        --glow: 0 0 0 1px rgba(0, 82, 204, 0.14), 0 30px 80px -34px rgba(0, 82, 204, 0.3);
         --signal: #0e9d6b;
         --signal-wash: #e4f5ee;
         --ghost: rgba(16, 20, 26, 0.035);
-        --shadow:
-          0 1px 2px rgba(16, 20, 26, 0.05),
-          0 22px 50px -24px rgba(16, 20, 26, 0.3);
+        --shadow: 0 1px 2px rgba(16, 20, 26, 0.05), 0 22px 50px -24px rgba(16, 20, 26, 0.3);
         --radius: 16px;
         --maxw: 1180px;
-        --mono:
-          ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo,
-          Consolas, monospace;
-        --sans:
-          system-ui, -apple-system, "Segoe UI", "Helvetica Neue", "PingFang SC",
-          "Microsoft YaHei", sans-serif;
+        --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
       }
       @media (prefers-color-scheme: dark) {
         :root {
@@ -169,17 +145,14 @@
           --accent-ink: #06101f;
           --accent-wash: #12203150;
           --grid: rgba(91, 155, 255, 0.1);
-          --glow:
-            0 0 0 1px rgba(91, 155, 255, 0.22),
-            0 40px 90px -40px rgba(43, 107, 255, 0.55);
+          --glow: 0 0 0 1px rgba(91, 155, 255, 0.22), 0 40px 90px -40px rgba(43, 107, 255, 0.55);
           --signal: #35c691;
           --signal-wash: #0e241c;
           --ghost: rgba(240, 242, 245, 0.03);
-          --shadow:
-            0 1px 2px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.75);
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.75);
         }
       }
-      :root[data-theme="light"] {
+      :root[data-theme='light'] {
         --paper: #f7f7f3;
         --paper-2: #efefe9;
         --panel: #fff;
@@ -193,17 +166,13 @@
         --accent-ink: #fff;
         --accent-wash: #e9f0ff;
         --grid: rgba(0, 82, 204, 0.07);
-        --glow:
-          0 0 0 1px rgba(0, 82, 204, 0.14),
-          0 30px 80px -34px rgba(0, 82, 204, 0.3);
+        --glow: 0 0 0 1px rgba(0, 82, 204, 0.14), 0 30px 80px -34px rgba(0, 82, 204, 0.3);
         --signal: #0e9d6b;
         --signal-wash: #e4f5ee;
         --ghost: rgba(16, 20, 26, 0.035);
-        --shadow:
-          0 1px 2px rgba(16, 20, 26, 0.05),
-          0 22px 50px -24px rgba(16, 20, 26, 0.3);
+        --shadow: 0 1px 2px rgba(16, 20, 26, 0.05), 0 22px 50px -24px rgba(16, 20, 26, 0.3);
       }
-      :root[data-theme="dark"] {
+      :root[data-theme='dark'] {
         --paper: #090b0e;
         --paper-2: #0f1318;
         --panel: #10151b;
@@ -217,14 +186,11 @@
         --accent-ink: #06101f;
         --accent-wash: #12203150;
         --grid: rgba(91, 155, 255, 0.1);
-        --glow:
-          0 0 0 1px rgba(91, 155, 255, 0.22),
-          0 40px 90px -40px rgba(43, 107, 255, 0.55);
+        --glow: 0 0 0 1px rgba(91, 155, 255, 0.22), 0 40px 90px -40px rgba(43, 107, 255, 0.55);
         --signal: #35c691;
         --signal-wash: #0e241c;
         --ghost: rgba(240, 242, 245, 0.03);
-        --shadow:
-          0 1px 2px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.75);
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.75);
       }
 
       html {
@@ -425,8 +391,7 @@
         border-radius: 24px;
         background:
           linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 34px,
-          linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 34px
-            100%,
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 34px 100%,
           var(--panel);
         box-shadow: var(--glow);
         padding: 30px clamp(24px, 4vw, 56px) clamp(40px, 5vw, 60px);
@@ -434,7 +399,7 @@
       }
       .console::before {
         /* device label, top-left */
-        content: "\25AA renders on your device \2014 nothing leaves the client";
+        content: '\25AA renders on your device \2014 nothing leaves the client';
         position: absolute;
         top: 14px;
         left: 20px;
@@ -455,7 +420,7 @@
         gap: 7px;
       }
       .console .beacon::before {
-        content: "";
+        content: '';
         width: 7px;
         height: 7px;
         border-radius: 50%;
@@ -510,7 +475,7 @@
         margin-bottom: 24px;
       }
       .eyebrow::before {
-        content: "";
+        content: '';
         width: 26px;
         height: 2px;
         background: var(--accent);
@@ -539,7 +504,7 @@
         padding: 0 0.12em;
       }
       h1 .sel::after {
-        content: "";
+        content: '';
         display: inline-block;
         width: 2.5px;
         height: 0.82em;
@@ -845,7 +810,7 @@
           box-shadow 0.16s;
       }
       .cell::before {
-        content: "";
+        content: '';
         position: absolute;
         top: 0;
         left: 0;
@@ -927,7 +892,7 @@
         display: none;
       }
       .qa summary::after {
-        content: "+";
+        content: '+';
         font-family: var(--mono);
         color: var(--accent);
         font-weight: 400;
@@ -1106,13 +1071,9 @@
     <script>
       (function () {
         var p = new URLSearchParams(location.search);
-        var embed =
-          window.parent !== window ||
-          p.has("embed") ||
-          p.get("embedded") === "1" ||
-          p.has("embedded");
+        var embed = window.parent !== window || p.has('embed') || p.get('embedded') === '1' || p.has('embedded');
         window.__embedMode = embed;
-        if (embed && document.body) document.body.classList.add("embed-mode");
+        if (embed && document.body) document.body.classList.add('embed-mode');
       })();
     </script>
 
@@ -1121,23 +1082,13 @@
       <section class="page">
         <header class="bar">
           <a class="brand" href="https://fileview.chaxus.com/"
-            ><span class="dot"></span>ranui/preview<small
-              >&lt;r-preview&gt;</small
-            ></a
+            ><span class="dot"></span>ranui/preview<small>&lt;r-preview&gt;</small></a
           >
           <nav>
             <a href="#try">Demo</a>
             <a href="#embed">Embed mode</a>
-            <a
-              href="https://www.npmjs.com/package/@ranui/preview"
-              rel="noopener"
-              >npm</a
-            >
-            <a
-              class="gh"
-              href="https://github.com/ranuts/fileview"
-              rel="noopener"
-            >
+            <a href="https://www.npmjs.com/package/@ranui/preview" rel="noopener">npm</a>
+            <a class="gh" href="https://github.com/ranuts/fileview" rel="noopener">
               <svg class="ghmark" viewBox="0 0 16 16" aria-hidden="true">
                 <path
                   d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
@@ -1155,38 +1106,28 @@
 
             <div class="hero">
               <div class="copy">
-                <span class="eyebrow reveal d1"
-                  >Web component &middot; one tag</span
-                >
+                <span class="eyebrow reveal d1">Web component &middot; one tag</span>
                 <h1 class="reveal d2">
                   Drop a <span class="sel">file preview</span>
                   <span class="thin">into any web page.</span>
                 </h1>
                 <p class="lead reveal d3">
-                  A single custom element that renders PDF, Word, Excel and
-                  PowerPoint — read-only, framework-free, no backend.
+                  A single custom element that renders PDF, Word, Excel and PowerPoint — read-only, framework-free, no
+                  backend.
                 </p>
                 <div class="status reveal d4">
-                  <b>zero-config</b><span class="sep">&middot;</span
-                  ><span>no backend</span> <span class="sep">&middot;</span
-                  ><span class="fmt">.pdf .docx .pptx .xlsx</span>
+                  <b>zero-config</b><span class="sep">&middot;</span><span>no backend</span>
+                  <span class="sep">&middot;</span><span class="fmt">.pdf .docx .pptx .xlsx</span>
                 </div>
                 <div class="cta-row reveal d5">
-                  <a class="btn primary" href="#try"
-                    >Try the live demo <span class="arrow">&rarr;</span></a
-                  >
-                  <a
-                    class="btn ghost"
-                    href="https://www.npmjs.com/package/@ranui/preview"
-                    rel="noopener"
+                  <a class="btn primary" href="#try">Try the live demo <span class="arrow">&rarr;</span></a>
+                  <a class="btn ghost" href="https://www.npmjs.com/package/@ranui/preview" rel="noopener"
                     >pnpm add @ranui/preview</a
                   >
                 </div>
                 <p class="crosslink reveal d5">
                   Need to <em>edit</em> the file, not just view it? &rarr;
-                  <a href="https://edit.chaxus.com" rel="noopener"
-                    >edit.chaxus.com</a
-                  >
+                  <a href="https://edit.chaxus.com" rel="noopener">edit.chaxus.com</a>
                 </p>
               </div>
 
@@ -1194,9 +1135,7 @@
                 <div class="code" aria-hidden="true">
                   <div class="frame-bar">
                     <span class="tl"><i></i><i></i><i></i></span
-                    ><span class="frame-file"
-                      ><span class="ext">HTML</span> index.html</span
-                    >
+                    ><span class="frame-file"><span class="ext">HTML</span> index.html</span>
                   </div>
                   <pre><span class="cm">// one import, one element</span>
 <span class="kw">import</span> <span class="str">'@ranui/preview'</span>;
@@ -1207,8 +1146,7 @@
                   <div class="drop">
                     <span class="disc">&#8613;</span
                     ><span class="exts"
-                      >Renders <b>PDF</b>, <b>DOCX</b>, <b>PPTX</b>,
-                      <b>XLSX</b> — right in the client.</span
+                      >Renders <b>PDF</b>, <b>DOCX</b>, <b>PPTX</b>, <b>XLSX</b> — right in the client.</span
                     >
                   </div>
                 </div>
@@ -1223,10 +1161,7 @@
           <div class="try-head">
             <div class="t">
               <b>Try it — your file never leaves this page</b>
-              <span
-                >Pick a local .pdf .docx .pptx or .xlsx — it opens in a
-                full-screen preview.</span
-              >
+              <span>Pick a local .pdf .docx .pptx or .xlsx — it opens in a full-screen preview.</span>
             </div>
             <button class="btn primary" id="choose-file" type="button">
               Choose a file — opens a full-screen preview
@@ -1234,9 +1169,7 @@
             </button>
           </div>
           <noscript>
-            <p class="crosslink">
-              The interactive file preview requires JavaScript to be enabled.
-            </p>
+            <p class="crosslink">The interactive file preview requires JavaScript to be enabled.</p>
           </noscript>
         </div>
 
@@ -1245,15 +1178,12 @@
             <div class="txt">
               <h2>Embed mode for iframes</h2>
               <p>
-                Append <code>?embed=1</code> and the page drops its header, hero
-                and footer. Add <code>?src=&lt;url&gt;</code> to auto-load a
-                document — it opens directly in the full-screen preview, ready
-                to drop into an <code>&lt;iframe&gt;</code> on any site.
+                Append <code>?embed=1</code> and the page drops its header, hero and footer. Add
+                <code>?src=&lt;url&gt;</code> to auto-load a document — it opens directly in the full-screen preview,
+                ready to drop into an <code>&lt;iframe&gt;</code> on any site.
               </p>
             </div>
-            <a class="btn ghost" href="?embed=1" target="_blank" rel="noopener"
-              >Open embed example &rarr;</a
-            >
+            <a class="btn ghost" href="?embed=1" target="_blank" rel="noopener">Open embed example &rarr;</a>
           </div>
         </div>
 
@@ -1264,18 +1194,12 @@
               <div class="cell">
                 <div class="k">ONE TAG</div>
                 <h3>Just &lt;r-preview src&gt;</h3>
-                <p>
-                  A standard custom element. Works with React, Vue, Svelte or
-                  plain HTML — no wrapper needed.
-                </p>
+                <p>A standard custom element. Works with React, Vue, Svelte or plain HTML — no wrapper needed.</p>
               </div>
               <div class="cell">
                 <div class="k">CLIENT-SIDE</div>
                 <h3>No conversion server</h3>
-                <p>
-                  Files render in the browser. Nothing is uploaded, so it's safe
-                  for private documents.
-                </p>
+                <p>Files render in the browser. Nothing is uploaded, so it's safe for private documents.</p>
               </div>
               <div class="cell">
                 <div class="k">4 FORMATS</div>
@@ -1288,10 +1212,7 @@
               <div class="cell">
                 <div class="k">?EMBED=1</div>
                 <h3>Chromeless iframe mode</h3>
-                <p>
-                  The same page collapses to a bare viewer for embedding — one
-                  build, two jobs.
-                </p>
+                <p>The same page collapses to a bare viewer for embedding — one build, two jobs.</p>
               </div>
             </div>
           </div>
@@ -1306,31 +1227,26 @@
             <details open>
               <summary>How do I embed it in an iframe?</summary>
               <p class="a">
-                Point the iframe at the preview page with <code>?embed=1</code>.
-                The header, hero and footer are removed. Pass
-                <code>?src=&lt;url&gt;</code> to auto-load a document — it opens
-                in a full-screen preview that fills the frame.
+                Point the iframe at the preview page with <code>?embed=1</code>. The header, hero and footer are
+                removed. Pass <code>?src=&lt;url&gt;</code> to auto-load a document — it opens in a full-screen preview
+                that fills the frame.
               </p>
             </details>
             <details>
               <summary>Which formats are supported?</summary>
-              <p class="a">
-                PDF, Word (DOCX), PowerPoint (PPTX) and Excel (XLSX / XLS), all
-                rendered on the client.
-              </p>
+              <p class="a">PDF, Word (DOCX), PowerPoint (PPTX) and Excel (XLSX / XLS), all rendered on the client.</p>
             </details>
             <details>
               <summary>Do I need a backend or conversion service?</summary>
               <p class="a">
-                No. Rendering happens entirely in the browser, so files never
-                leave the user's device — no server required.
+                No. Rendering happens entirely in the browser, so files never leave the user's device — no server
+                required.
               </p>
             </details>
             <details>
               <summary>How do I install it?</summary>
               <p class="a">
-                Install from npm with <code>pnpm add @ranui/preview</code>,
-                import it once, then use the
+                Install from npm with <code>pnpm add @ranui/preview</code>, import it once, then use the
                 <code>&lt;r-preview src="…"&gt;</code> element anywhere.
               </p>
             </details>
@@ -1347,15 +1263,9 @@
               >Part of the ran ecosystem &middot; all open source</span
             >
             <nav>
-              <a href="https://edit.chaxus.com" rel="noopener"
-                ><b>edit.chaxus.com</b> <small>Office editor</small></a
-              >
-              <span class="here"
-                ><b>@ranui/preview</b> <small>embed a file viewer</small></span
-              >
-              <a href="https://ran.chaxus.com" rel="noopener"
-                ><b>ran.chaxus.com</b> <small>UI components</small></a
-              >
+              <a href="https://edit.chaxus.com" rel="noopener"><b>edit.chaxus.com</b> <small>Office editor</small></a>
+              <span class="here"><b>@ranui/preview</b> <small>embed a file viewer</small></span>
+              <a href="https://ran.chaxus.com" rel="noopener"><b>ran.chaxus.com</b> <small>UI components</small></a>
             </nav>
           </div>
         </div>
@@ -1365,14 +1275,8 @@
           <nav>
             <a href="#try">Demo</a>
             <a href="#embed">Embed mode</a>
-            <a
-              href="https://www.npmjs.com/package/@ranui/preview"
-              rel="noopener"
-              >npm</a
-            >
-            <a href="https://github.com/ranuts/fileview" rel="noopener"
-              >GitHub</a
-            >
+            <a href="https://www.npmjs.com/package/@ranui/preview" rel="noopener">npm</a>
+            <a href="https://github.com/ranuts/fileview" rel="noopener">GitHub</a>
           </nav>
           <span class="lic">AGPL-3.0</span>
         </footer>
@@ -1384,25 +1288,21 @@
     <script>
       (function () {
         const params = new URLSearchParams(location.search);
-        const preview = document.getElementById("preview");
+        const preview = document.getElementById('preview');
         if (!preview) return;
 
         // <r-preview> is a trigger, not an inline viewer: on `src` it opens a
         // body-level full-screen modal. It already sits at the end of <body>, so
         // it survives hiding .landing-chrome in embed mode — no reparent needed.
         if (window.__embedMode) {
-          document.body.classList.add("embed-mode");
+          document.body.classList.add('embed-mode');
         }
 
         // Only http(s)/blob URLs may be loaded; reject javascript:, data:, etc.
         function isSafeSrc(value) {
           try {
             const url = new URL(value, location.href);
-            return (
-              url.protocol === "http:" ||
-              url.protocol === "https:" ||
-              url.protocol === "blob:"
-            );
+            return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'blob:';
           } catch (e) {
             return false;
           }
@@ -1411,30 +1311,29 @@
         // Auto-load a document from ?src= / ?file= (handy for embed mode).
         // Gate on the element being defined: setting `src` on an un-upgraded
         // element makes attributeChangedCallback fire before connectedCallback.
-        const src = params.get("src") || params.get("file");
+        const src = params.get('src') || params.get('file');
         if (src) {
-          customElements.whenDefined("r-preview").then(function () {
+          customElements.whenDefined('r-preview').then(function () {
             if (isSafeSrc(src)) {
-              preview.setAttribute("src", src);
+              preview.setAttribute('src', src);
             } else {
-              console.warn("Ignored unsafe preview src:", src);
+              console.warn('Ignored unsafe preview src:', src);
             }
           });
         }
 
         // Wire the "Choose a file" control to open the full-screen preview.
-        const chooseBtn = document.getElementById("choose-file");
+        const chooseBtn = document.getElementById('choose-file');
         if (chooseBtn) {
-          chooseBtn.addEventListener("click", () => {
-            const input = document.createElement("input");
-            input.type = "file";
-            input.accept = ".docx,.pptx,.pdf,.xlsx";
+          chooseBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.docx,.pptx,.pdf,.xlsx';
             input.onchange = () => {
               const file = input.files && input.files[0];
               if (file) {
                 const objectUrl = URL.createObjectURL(file);
-                if (isSafeSrc(objectUrl))
-                  preview.setAttribute("src", objectUrl);
+                if (isSafeSrc(objectUrl)) preview.setAttribute('src', objectUrl);
               }
             };
             input.click();
