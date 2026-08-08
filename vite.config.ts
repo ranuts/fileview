@@ -3,7 +3,6 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import type { BuildOptions, PluginOption, UserConfig } from 'vite';
 import { visualizer } from 'rollup-plugin-visualizer';
-import { babel } from '@rollup/plugin-babel';
 import loadStyle from './plugins/load-style';
 import { PORT } from './build/config';
 
@@ -71,9 +70,6 @@ export const viteConfig: UserConfig = {
       emitFile: false,
       filename: 'report/build-stats.html',
     }) as PluginOption,
-    babel({
-      babelHelpers: 'bundled',
-    }),
   ],
   resolve: {
     alias: {
