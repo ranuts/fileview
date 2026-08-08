@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-alpha-3 (2026-08-08)
+
+### Changed
+
+- Dependencies aligned with the ecosystem: `ranui` `0.2.0-alpha.5` → `0.4.2-alpha.2`, `ranuts` `0.2.0-alpha.0` → `0.4.0-alpha.2`. This package bundles its own copy of `ranui` (it self-registers `r-icon` / `r-message` via `customElements.define`, guarded so a duplicate registration is a silent no-op), so a consumer's own `ranui` import and this package's bundled one race to claim those tags — whichever wins was, until now, up to two feature releases behind. This bump does not remove the race, but it does mean both sides are current code either way. `md5` / `isSafari` / `Client` / `MessageCodec` / `noop` (from `ranuts/utils`) and `View` / `Div` / `Slot` / `Span` / `Style` (from `ranui/builder`) — the only symbols this package imports — are unchanged across the jump; `tsc --noEmit` and both build targets (`build:es`, `build:umd`) pass with no new errors.
+- Not verified in this pass: the office-editor message chunk wire format against the deployed editor (the previous dependency bump's changelog entry called this out explicitly as checked) — worth a manual smoke test against a real DOCX/XLSX preview before publishing.
+
+### Known pre-existing issue (unrelated to this bump)
+
+- `tsc --noEmit` reports `Property 'message' does not exist on type 'Window'` (`components/preview/index.ts`) and two `Property 'pdfjsLib' does not exist` errors (`components/preview/pdf.ts`). Both are declared as global `Window` augmentations in `typings.d.ts`, but that file only reaches the type-checker via `compilerOptions.types` (a field meant for `@types` package names, not relative paths) — reproduces identically on the old dependency versions, so it predates this change.
+
 ## 0.1.0-alpha-1 (2026-07-11)
 
 ### Fixed

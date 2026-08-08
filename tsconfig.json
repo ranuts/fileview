@@ -1,5 +1,5 @@
 {
-  "include": ["components", "plugins", "utils", "test", "shadowless", "**/*.ts", "typing.d.ts"],
+  "include": ["components", "plugins", "utils", "**/*.ts"],
   "exclude": ["node_modules/**", "dist/**", "assets", "public"],
   "compilerOptions": {
     "module": "ESNext",
@@ -8,7 +8,7 @@
     "target": "ESNext",
     "declaration": true,
     "outDir": "dist",
-    "types": ["./typings.d.ts"],
+    "types": [],
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "isolatedModules": false,
@@ -22,7 +22,6 @@
       "@/assets/*": ["./assets/*"],
       "@/public/*": ["./public/*"],
       "@/components/*": ["./components/*"],
-      "@/shadowless/*": ["./shadowless/*"],
       "@/plugins/*": ["./plugins/*"],
       "@/utils/*": ["./utils/*"]
     }

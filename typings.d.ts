@@ -29,23 +29,21 @@ interface PDFDocumentProxy {
   getPage: (x: number) => Promise<PDFPageProxy>;
 }
 
-declare global {
-  interface Window {
-    ranui: Partial<Ranui>;
-    message: Partial<Ran.Message>;
-    MathJax: MathJax;
-    katex: {
-      render: (x: string, y: HTMLElement, z: object) => void;
+interface Window {
+  ranui: Partial<Ranui>;
+  message: Partial<Ran.Message>;
+  MathJax: MathJax;
+  katex: {
+    render: (x: string, y: HTMLElement, z: object) => void;
+  };
+  pdfjsLib: {
+    GlobalWorkerOptions: {
+      workerSrc: string;
     };
-    pdfjsLib: {
-      GlobalWorkerOptions: {
-        workerSrc: string;
-      };
-      getDocument: (x: string | ArrayBuffer) => {
-        promise: Promise<PDFDocumentProxy>;
-      };
+    getDocument: (x: string | ArrayBuffer) => {
+      promise: Promise<PDFDocumentProxy>;
     };
-  }
+  };
 }
 
 interface BaseIntrinsicElements {
