@@ -1,35 +1,1345 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Permissions-Policy" content="autoplay=*, camera=*, fullscreen=*, microphone=*, clipboard-write=*, display-capture=*, geolocation=*">
-  <title>Document</title>
-  <script type="module" src="./index.ts"></script>
-</head>
+    <!-- Primary SEO -->
+    <title>@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer</title>
+    <meta
+      name="description"
+      content="A framework-free web component that renders PDF, DOCX, PPTX and XLSX right in the browser. One tag — <r-preview src>. No backend, no upload, embeddable in any iframe."
+    />
+    <meta
+      name="keywords"
+      content="pdf viewer, docx viewer, xlsx viewer, pptx viewer, embed file preview, web component file viewer, client-side document preview, iframe pdf embed, r-preview, ranui"
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://fileview.chaxus.com/" />
+    <meta name="theme-color" content="#0052cc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#090b0e" media="(prefers-color-scheme: dark)" />
 
-<body>
-  <r-preview id="preview"></r-preview>
-  <r-button type="primary" style="cursor: pointer;" onclick="uploadFile()">Choose File to Preview</r-button>
-  <script>
-    const uploadFile = () => {
-      const preview = document.getElementById('preview');
-      const input = document.createElement('input');
-      input.setAttribute('type', 'file');
-      input.setAttribute('accept', '.docx,.pptx,.pdf,.xlsx');
-      input.click();
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="@ranui/preview" />
+    <meta property="og:title" content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer" />
+    <meta
+      property="og:description"
+      content="One custom element that renders PDF, DOCX, PPTX and XLSX entirely on the client. No backend, no upload, embeddable in any iframe."
+    />
+    <meta property="og:url" content="https://fileview.chaxus.com/" />
 
-      input.onchange = (e) => {
-        const { files = [] } = input;
-        if (files.length > 0) {
-          const file = files[0];
-          const url = URL.createObjectURL(file);
-          preview.setAttribute('src', url);
+    <!-- Twitter (no hosted preview image, so use the compact summary card) -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer" />
+    <meta
+      name="twitter:description"
+      content="Framework-free <r-preview src> web component. Render PDF &amp; Office files client-side, embeddable in any iframe."
+    />
+
+    <!-- Structured data: the package -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "name": "@ranui/preview",
+        "description": "A framework-free web component (<r-preview src>) that renders PDF, DOCX, PPTX and XLSX files entirely in the browser, with no backend and no upload.",
+        "url": "https://fileview.chaxus.com/",
+        "codeRepository": "https://github.com/ranuts/fileview",
+        "programmingLanguage": "TypeScript",
+        "runtimePlatform": "Web Browser",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "author": { "@type": "Person", "name": "chaxus" },
+        "keywords": "pdf viewer, docx viewer, xlsx viewer, pptx viewer, web component, client-side, iframe embed",
+        "sameAs": [
+          "https://github.com/ranuts/fileview",
+          "https://www.npmjs.com/package/@ranui/preview",
+          "https://ran.chaxus.com"
+        ]
+      }
+    </script>
+
+    <!-- Structured data: FAQ -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I embed it in an iframe?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Point the iframe at the preview page with ?embed=1. The header, hero and footer are removed. Pass ?src=<url> to auto-load a document — it opens in a full-screen preview that fills the frame."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which formats are supported?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "PDF, Word (DOCX), PowerPoint (PPTX) and Excel (XLSX / XLS), all rendered on the client."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need a backend or conversion service?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Rendering happens entirely in the browser, so files never leave the user's device — no server required."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I install it?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Install from npm with pnpm add @ranui/preview, import it once, then use the <r-preview src=\"…\"> element anywhere."
+            }
+          }
+        ]
+      }
+    </script>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --paper: #f7f7f3;
+        --paper-2: #efefe9;
+        --panel: #ffffff;
+        --ink: #10141a;
+        --ink-2: #3c434c;
+        --muted: #737b84;
+        --line: #e2e2da;
+        --line-2: #d0d0c6;
+        --accent: #0052cc;
+        --accent-hot: #2f6bff;
+        --accent-ink: #ffffff;
+        --accent-wash: #e9f0ff;
+        --grid: rgba(0, 82, 204, 0.07);
+        --glow: 0 0 0 1px rgba(0, 82, 204, 0.14), 0 30px 80px -34px rgba(0, 82, 204, 0.3);
+        --signal: #0e9d6b;
+        --signal-wash: #e4f5ee;
+        --ghost: rgba(16, 20, 26, 0.035);
+        --shadow: 0 1px 2px rgba(16, 20, 26, 0.05), 0 22px 50px -24px rgba(16, 20, 26, 0.3);
+        --radius: 16px;
+        --maxw: 1180px;
+        --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --paper: #090b0e;
+          --paper-2: #0f1318;
+          --panel: #10151b;
+          --ink: #f0f2f5;
+          --ink-2: #c4cbd2;
+          --muted: #8a929b;
+          --line: #212831;
+          --line-2: #2d353f;
+          --accent: #5b9bff;
+          --accent-hot: #86b6ff;
+          --accent-ink: #06101f;
+          --accent-wash: #12203150;
+          --grid: rgba(91, 155, 255, 0.1);
+          --glow: 0 0 0 1px rgba(91, 155, 255, 0.22), 0 40px 90px -40px rgba(43, 107, 255, 0.55);
+          --signal: #35c691;
+          --signal-wash: #0e241c;
+          --ghost: rgba(240, 242, 245, 0.03);
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.75);
         }
-      };
-    };
-  </script>
-</body>
+      }
+      :root[data-theme='light'] {
+        --paper: #f7f7f3;
+        --paper-2: #efefe9;
+        --panel: #fff;
+        --ink: #10141a;
+        --ink-2: #3c434c;
+        --muted: #737b84;
+        --line: #e2e2da;
+        --line-2: #d0d0c6;
+        --accent: #0052cc;
+        --accent-hot: #2f6bff;
+        --accent-ink: #fff;
+        --accent-wash: #e9f0ff;
+        --grid: rgba(0, 82, 204, 0.07);
+        --glow: 0 0 0 1px rgba(0, 82, 204, 0.14), 0 30px 80px -34px rgba(0, 82, 204, 0.3);
+        --signal: #0e9d6b;
+        --signal-wash: #e4f5ee;
+        --ghost: rgba(16, 20, 26, 0.035);
+        --shadow: 0 1px 2px rgba(16, 20, 26, 0.05), 0 22px 50px -24px rgba(16, 20, 26, 0.3);
+      }
+      :root[data-theme='dark'] {
+        --paper: #090b0e;
+        --paper-2: #0f1318;
+        --panel: #10151b;
+        --ink: #f0f2f5;
+        --ink-2: #c4cbd2;
+        --muted: #8a929b;
+        --line: #212831;
+        --line-2: #2d353f;
+        --accent: #5b9bff;
+        --accent-hot: #86b6ff;
+        --accent-ink: #06101f;
+        --accent-wash: #12203150;
+        --grid: rgba(91, 155, 255, 0.1);
+        --glow: 0 0 0 1px rgba(91, 155, 255, 0.22), 0 40px 90px -40px rgba(43, 107, 255, 0.55);
+        --signal: #35c691;
+        --signal-wash: #0e241c;
+        --ghost: rgba(240, 242, 245, 0.03);
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.75);
+      }
 
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        line-height: 1.6;
+        font-size: 17px;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+
+      .page {
+        position: relative;
+      }
+
+      /* ---------- top bar ---------- */
+      header.bar {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 22px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        position: relative;
+        z-index: 3;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 11px;
+        text-decoration: none;
+        color: var(--ink);
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        font-size: 16px;
+      }
+      .brand .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        background: var(--signal);
+        align-self: center;
+        box-shadow: 0 0 0 4px var(--signal-wash);
+      }
+      .brand small {
+        font: 500 12px/1 var(--mono);
+        color: var(--muted);
+      }
+      .bar nav {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        font-size: 14px;
+      }
+      .bar nav a {
+        color: var(--ink-2);
+        text-decoration: none;
+      }
+      .bar nav a:hover {
+        color: var(--accent);
+      }
+      .bar nav a.gh {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--ink-2);
+        border: 1px solid var(--line-2);
+        padding: 7px 12px;
+        border-radius: 9px;
+        transition: 0.15s;
+      }
+      .bar nav a.gh:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .ghmark {
+        width: 15px;
+        height: 15px;
+        fill: currentColor;
+        flex: none;
+      }
+      .btn .ghmark {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* intent-differentiated cross-link */
+      .crosslink {
+        margin: 18px 0 0;
+        font-size: 13.5px;
+        color: var(--muted);
+      }
+      .crosslink a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 650;
+      }
+      .crosslink a:hover {
+        text-decoration: underline;
+      }
+      .crosslink em {
+        font-style: normal;
+        color: var(--ink-2);
+        font-weight: 650;
+      }
+
+      /* ran ecosystem strip */
+      .eco {
+        border-top: 1px solid var(--line);
+        background: var(--paper-2);
+      }
+      .eco-inner {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 22px 26px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px 26px;
+      }
+      .eco-label {
+        font: 700 11px/1.5 var(--mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .eco-label .gitmark {
+        width: 15px;
+        height: 15px;
+        fill: currentColor;
+        flex: none;
+      }
+      .eco nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .eco nav a,
+      .eco nav .here {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 13.5px;
+        text-decoration: none;
+        padding: 9px 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+      }
+      .eco nav a {
+        color: var(--ink-2);
+        transition: 0.15s;
+      }
+      .eco nav a:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-1px);
+      }
+      .eco nav b {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        font-weight: 700;
+      }
+      .eco nav small {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .eco nav .here {
+        color: var(--ink);
+        border-color: var(--signal);
+        box-shadow: inset 0 0 0 1px var(--signal);
+      }
+
+      /* ---------- hero shell ---------- */
+      .stage {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 26px 26px 40px;
+        position: relative;
+      }
+
+      /* the "device boundary" console */
+      .console {
+        position: relative;
+        border: 1.5px solid var(--line-2);
+        border-radius: 24px;
+        background:
+          linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 34px,
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 34px 100%,
+          var(--panel);
+        box-shadow: var(--glow);
+        padding: 30px clamp(24px, 4vw, 56px) clamp(40px, 5vw, 60px);
+        overflow: hidden;
+      }
+      .console::before {
+        /* device label, top-left */
+        content: '\25AA renders on your device \2014 nothing leaves the client';
+        position: absolute;
+        top: 14px;
+        left: 20px;
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        opacity: 0.85;
+      }
+      .console .beacon {
+        position: absolute;
+        top: 12px;
+        right: 18px;
+        font: 600 11px/1 var(--mono);
+        letter-spacing: 0.08em;
+        color: var(--signal);
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .console .beacon::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--signal);
+        box-shadow: 0 0 0 0 var(--signal);
+        animation: pulse 2.4s ease-out infinite;
+      }
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 var(--signal-wash);
+        }
+        70% {
+          box-shadow: 0 0 0 7px transparent;
+        }
+        100% {
+          box-shadow: 0 0 0 0 transparent;
+        }
+      }
+
+      /* giant ghost watermark */
+      .console .ghost {
+        position: absolute;
+        right: -2%;
+        bottom: -14%;
+        margin: 0;
+        font: 900 clamp(150px, 26vw, 340px)/0.8 var(--sans);
+        letter-spacing: -0.04em;
+        color: var(--ghost);
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+      }
+
+      .hero {
+        position: relative;
+        z-index: 1;
+        margin-top: 26px;
+        display: grid;
+        grid-template-columns: 1.02fr 0.98fr;
+        gap: 52px;
+        align-items: center;
+      }
+
+      .eyebrow {
+        font: 700 12px/1 var(--mono);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--accent);
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+      .eyebrow::before {
+        content: '';
+        width: 26px;
+        height: 2px;
+        background: var(--accent);
+      }
+
+      h1 {
+        font-size: clamp(38px, 6vw, 74px);
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+        font-weight: 850;
+        margin: 0 0 22px;
+        text-wrap: balance;
+      }
+      h1 .thin {
+        font-weight: 300;
+        color: var(--ink-2);
+        letter-spacing: -0.02em;
+      }
+      /* selection-highlight flourish */
+      h1 .sel {
+        position: relative;
+        white-space: nowrap;
+        background: var(--accent-wash);
+        box-shadow: 0 0 0 1.5px var(--accent);
+        border-radius: 4px;
+        padding: 0 0.12em;
+      }
+      h1 .sel::after {
+        content: '';
+        display: inline-block;
+        width: 2.5px;
+        height: 0.82em;
+        background: var(--accent);
+        margin-left: 0.1em;
+        vertical-align: -0.06em;
+        animation: blink 1.05s steps(1) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .lead {
+        font-size: clamp(17px, 1.6vw, 20px);
+        color: var(--ink-2);
+        margin: 0 0 26px;
+        max-width: 33ch;
+      }
+
+      .status {
+        font: 500 13px/1.7 var(--mono);
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 5px 13px;
+        padding: 12px 15px;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        background: var(--paper-2);
+        margin-bottom: 30px;
+        width: fit-content;
+        max-width: 100%;
+      }
+      .status b {
+        color: var(--signal);
+        font-weight: 700;
+      }
+      .status .sep {
+        color: var(--line-2);
+      }
+      .status .fmt {
+        color: var(--ink-2);
+      }
+
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 650;
+        font-size: 15.5px;
+        text-decoration: none;
+        padding: 14px 24px;
+        border-radius: 11px;
+        border: 1.5px solid transparent;
+        transition:
+          transform 0.14s ease,
+          background 0.14s,
+          border-color 0.14s,
+          box-shadow 0.14s;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: var(--accent-ink);
+        box-shadow: 0 8px 22px -8px var(--accent);
+      }
+      .btn.primary:hover {
+        background: var(--accent-hot);
+        transform: translateY(-2px);
+        box-shadow: 0 14px 30px -10px var(--accent);
+      }
+      .btn.ghost {
+        color: var(--ink);
+        border-color: var(--line-2);
+        background: transparent;
+      }
+      .btn.ghost:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-2px);
+      }
+      .btn .arrow {
+        transition: transform 0.14s;
+      }
+      .btn.primary:hover .arrow {
+        transform: translateX(4px);
+      }
+
+      /* ---------- code window ---------- */
+      .code {
+        position: relative;
+        background: var(--panel);
+        border: 1px solid var(--line-2);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .frame-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 15px;
+        background: var(--paper-2);
+        border-bottom: 1px solid var(--line);
+      }
+      .tl {
+        display: flex;
+        gap: 7px;
+      }
+      .tl i {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--line-2);
+        display: block;
+      }
+      .frame-file {
+        margin-left: 7px;
+        font: 500 12.5px/1 var(--mono);
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .frame-file .ext {
+        color: var(--signal);
+        background: var(--signal-wash);
+        padding: 4px 7px;
+        border-radius: 6px;
+        font-size: 11px;
+        letter-spacing: 0.03em;
+      }
+      .code pre {
+        margin: 0;
+        padding: 22px 24px;
+        overflow-x: auto;
+        font: 500 13.5px/1.9 var(--mono);
+        color: var(--ink-2);
+        tab-size: 2;
+      }
+      .code .cm {
+        color: var(--muted);
+      }
+      .code .kw {
+        color: var(--accent);
+      }
+      .code .el {
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .code .at {
+        color: var(--signal);
+      }
+      .code .str {
+        color: var(--ink);
+      }
+      .drop {
+        border-top: 1px solid var(--line);
+        padding: 15px 22px;
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        background: var(--paper-2);
+        font: 500 13px/1.4 var(--mono);
+        color: var(--muted);
+      }
+      .drop .disc {
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        background: var(--accent-wash);
+        color: var(--accent);
+        border: 1px dashed var(--accent);
+        font-size: 16px;
+      }
+      .drop .exts b {
+        color: var(--ink-2);
+        font-weight: 700;
+      }
+
+      /* ---------- live try panel ---------- */
+      .try-wrap {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 8px 26px 10px;
+      }
+      .try-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 16px;
+      }
+      .try-head .t {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .try-head .t b {
+        font-size: 18px;
+        letter-spacing: -0.01em;
+      }
+      .try-head .t span {
+        font: 500 12.5px/1.4 var(--mono);
+        color: var(--muted);
+      }
+      /* <r-preview> is only a programmatic trigger — the real document opens in a
+         body-level full-screen modal (.r-preview-mask), so nothing renders inside
+         the host. Kept in the DOM (embed/auto-load logic needs it) but hidden.
+         Default-hidden also prevents a bare box leaking to the page with JS off. */
+      #preview {
+        display: none;
+      }
+
+      /* ---------- embed callout ---------- */
+      .embed-note {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 30px 26px 20px;
+      }
+      .embed-note .box {
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 22px 24px;
+        display: flex;
+        gap: 18px;
+        align-items: center;
+        flex-wrap: wrap;
+        box-shadow: var(--shadow);
+      }
+      .embed-note .txt {
+        flex: 1;
+        min-width: 260px;
+      }
+      .embed-note h2 {
+        margin: 0 0 6px;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .embed-note p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14.5px;
+      }
+      .embed-note code {
+        font: 500 12.5px/1 var(--mono);
+        background: var(--accent-wash);
+        color: var(--accent);
+        padding: 3px 7px;
+        border-radius: 5px;
+      }
+
+      /* ---------- feature band ---------- */
+      .band {
+        background: var(--paper-2);
+        border-top: 1px solid var(--line);
+        margin-top: 40px;
+      }
+      .band-inner {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 58px 26px;
+      }
+      .band-label {
+        font: 700 12px/1 var(--mono);
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 0 0 28px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+      .cell {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 24px 22px 26px;
+        position: relative;
+        overflow: hidden;
+        transition:
+          transform 0.16s,
+          border-color 0.16s,
+          box-shadow 0.16s;
+      }
+      .cell::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 3px;
+        width: 0;
+        background: var(--accent);
+        transition: width 0.22s ease;
+      }
+      .cell:hover {
+        transform: translateY(-4px);
+        border-color: var(--line-2);
+        box-shadow: var(--shadow);
+      }
+      .cell:hover::before {
+        width: 100%;
+      }
+      .cell .k {
+        font: 700 11px/1 var(--mono);
+        color: var(--accent);
+        letter-spacing: 0.06em;
+      }
+      .cell h3 {
+        font-size: 17px;
+        margin: 15px 0 8px;
+        letter-spacing: -0.01em;
+      }
+      .cell p {
+        margin: 0;
+        font-size: 14.5px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+      .cell code {
+        font: 500 12.5px/1 var(--mono);
+        background: var(--accent-wash);
+        color: var(--accent);
+        padding: 2px 5px;
+        border-radius: 5px;
+      }
+
+      /* ---------- faq ---------- */
+      .faq-wrap {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 60px 26px 62px;
+        display: grid;
+        grid-template-columns: 0.5fr 1fr;
+        gap: 44px;
+      }
+      .faq-wrap h2 {
+        font-size: clamp(24px, 3vw, 30px);
+        letter-spacing: -0.025em;
+        margin: 0;
+      }
+      .faq-wrap h2 + p {
+        color: var(--muted);
+        font-size: 15px;
+        margin-top: 12px;
+        max-width: 30ch;
+      }
+      .qa details {
+        border-top: 1px solid var(--line);
+      }
+      .qa details:last-child {
+        border-bottom: 1px solid var(--line);
+      }
+      .qa summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 18px 0;
+        font-weight: 650;
+        font-size: 16.5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+      }
+      .qa summary::-webkit-details-marker {
+        display: none;
+      }
+      .qa summary::after {
+        content: '+';
+        font-family: var(--mono);
+        color: var(--accent);
+        font-weight: 400;
+        font-size: 21px;
+        transition: transform 0.16s;
+      }
+      .qa details[open] summary::after {
+        transform: rotate(45deg);
+      }
+      .qa p.a {
+        margin: -2px 0 20px;
+        color: var(--ink-2);
+        font-size: 15px;
+        max-width: 62ch;
+        line-height: 1.65;
+      }
+      .qa code {
+        font: 500 12.5px/1 var(--mono);
+        background: var(--accent-wash);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 5px;
+      }
+
+      /* ---------- footer ---------- */
+      footer.foot {
+        max-width: var(--maxw);
+        margin: 0 auto;
+        padding: 30px 26px 46px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 13.5px;
+        border-top: 1px solid var(--line);
+      }
+      footer.foot nav {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      footer.foot a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      footer.foot a:hover {
+        color: var(--accent);
+      }
+      footer.foot .lic {
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      /* ---------- keyboard focus visibility ---------- */
+      a:focus-visible,
+      button:focus-visible,
+      summary:focus-visible,
+      .btn:focus-visible,
+      r-preview:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+        border-radius: 8px;
+      }
+
+      /* ---------- embed mode: collapse to bare viewer ---------- */
+      body.embed-mode {
+        overflow: hidden;
+      }
+      body.embed-mode .landing-chrome {
+        display: none !important;
+      }
+      /* Do NOT position or paint #preview in embed mode. It renders nothing itself;
+         the component appends its own full-screen .r-preview-mask (position:fixed,
+         z-index:1081) to <body>. An opaque max-z-index box here would cover it. */
+
+      /* ---------- load orchestration ---------- */
+      @media (prefers-reduced-motion: no-preference) {
+        .console {
+          animation: drawin 0.7s ease both;
+        }
+        .reveal {
+          opacity: 0;
+          transform: translateY(14px);
+          animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+        }
+        .d1 {
+          animation-delay: 0.12s;
+        }
+        .d2 {
+          animation-delay: 0.2s;
+        }
+        .d3 {
+          animation-delay: 0.28s;
+        }
+        .d4 {
+          animation-delay: 0.36s;
+        }
+        .d5 {
+          animation-delay: 0.46s;
+        }
+        .visual .code {
+          animation: floatin 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+          animation-delay: 0.3s;
+        }
+        @keyframes drawin {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.995);
+          }
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        @keyframes rise {
+          to {
+            opacity: 1;
+            transform: none;
+          }
+        }
+        @keyframes floatin {
+          from {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      }
+
+      @media (max-width: 900px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 34px;
+        }
+        .hero .visual {
+          order: 2;
+        }
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .faq-wrap {
+          grid-template-columns: 1fr;
+          gap: 22px;
+        }
+        .bar nav a:not(.gh) {
+          display: none;
+        }
+        .console .ghost {
+          display: none;
+        }
+      }
+      @media (max-width: 540px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        h1 {
+          font-size: clamp(34px, 11vw, 46px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+        }
+      }
+    </style>
+
+    <script type="module" src="./index.ts"></script>
+  </head>
+
+  <body>
+    <!-- Detect embed mode as early as possible to avoid a flash of page chrome -->
+    <script>
+      (function () {
+        var p = new URLSearchParams(location.search);
+        var embed = window.parent !== window || p.has('embed') || p.get('embedded') === '1' || p.has('embedded');
+        window.__embedMode = embed;
+        if (embed && document.body) document.body.classList.add('embed-mode');
+      })();
+    </script>
+
+    <!-- The single real viewer. Kept outside .landing-chrome so it survives embed mode. -->
+    <div class="landing-chrome">
+      <section class="page">
+        <header class="bar">
+          <a class="brand" href="https://fileview.chaxus.com/"
+            ><span class="dot"></span>ranui/preview<small>&lt;r-preview&gt;</small></a
+          >
+          <nav>
+            <a href="#try">Demo</a>
+            <a href="#embed">Embed mode</a>
+            <a href="https://www.npmjs.com/package/@ranui/preview" rel="noopener">npm</a>
+            <a class="gh" href="https://github.com/ranuts/fileview" rel="noopener">
+              <svg class="ghmark" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+                />
+              </svg>
+              Open source
+            </a>
+          </nav>
+        </header>
+
+        <div class="stage">
+          <div class="console">
+            <span class="beacon">&#9679; renders on client</span>
+            <p class="ghost" aria-hidden="true">.pdf</p>
+
+            <div class="hero">
+              <div class="copy">
+                <span class="eyebrow reveal d1">Web component &middot; one tag</span>
+                <h1 class="reveal d2">
+                  Drop a <span class="sel">file preview</span>
+                  <span class="thin">into any web page.</span>
+                </h1>
+                <p class="lead reveal d3">
+                  A single custom element that renders PDF, Word, Excel and PowerPoint — read-only, framework-free, no
+                  backend.
+                </p>
+                <div class="status reveal d4">
+                  <b>zero-config</b><span class="sep">&middot;</span><span>no backend</span>
+                  <span class="sep">&middot;</span><span class="fmt">.pdf .docx .pptx .xlsx</span>
+                </div>
+                <div class="cta-row reveal d5">
+                  <a class="btn primary" href="#try">Try the live demo <span class="arrow">&rarr;</span></a>
+                  <a class="btn ghost" href="https://www.npmjs.com/package/@ranui/preview" rel="noopener"
+                    >pnpm add @ranui/preview</a
+                  >
+                </div>
+                <p class="crosslink reveal d5">
+                  Need to <em>edit</em> the file, not just view it? &rarr;
+                  <a href="https://edit.chaxus.com" rel="noopener">edit.chaxus.com</a>
+                </p>
+              </div>
+
+              <div class="visual">
+                <div class="code" aria-hidden="true">
+                  <div class="frame-bar">
+                    <span class="tl"><i></i><i></i><i></i></span
+                    ><span class="frame-file"><span class="ext">HTML</span> index.html</span>
+                  </div>
+                  <pre><span class="cm">// one import, one element</span>
+<span class="kw">import</span> <span class="str">'@ranui/preview'</span>;
+
+<span class="el">&lt;r-preview</span>
+  <span class="at">src</span>=<span class="str">"/quarterly-report.pdf"</span>
+<span class="el">&gt;&lt;/r-preview&gt;</span></pre>
+                  <div class="drop">
+                    <span class="disc">&#8613;</span
+                    ><span class="exts"
+                      >Renders <b>PDF</b>, <b>DOCX</b>, <b>PPTX</b>, <b>XLSX</b> — right in the client.</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live, working demo. Clicking the button opens a body-level full-screen
+             preview modal; nothing renders inline on this page. -->
+        <div class="try-wrap" id="try">
+          <div class="try-head">
+            <div class="t">
+              <b>Try it — your file never leaves this page</b>
+              <span>Pick a local .pdf .docx .pptx or .xlsx — it opens in a full-screen preview.</span>
+            </div>
+            <button class="btn primary" id="choose-file" type="button">
+              Choose a file — opens a full-screen preview
+              <span class="arrow">&rarr;</span>
+            </button>
+          </div>
+          <noscript>
+            <p class="crosslink">The interactive file preview requires JavaScript to be enabled.</p>
+          </noscript>
+        </div>
+
+        <div class="embed-note" id="embed">
+          <div class="box">
+            <div class="txt">
+              <h2>Embed mode for iframes</h2>
+              <p>
+                Append <code>?embed=1</code> and the page drops its header, hero and footer. Add
+                <code>?src=&lt;url&gt;</code> to auto-load a document — it opens directly in the full-screen preview,
+                ready to drop into an <code>&lt;iframe&gt;</code> on any site.
+              </p>
+            </div>
+            <a class="btn ghost" href="?embed=1" target="_blank" rel="noopener">Open embed example &rarr;</a>
+          </div>
+        </div>
+
+        <div class="band" style="margin-top: 8px">
+          <div class="band-inner">
+            <h2 class="band-label">Built for embedding</h2>
+            <div class="grid">
+              <div class="cell">
+                <div class="k">ONE TAG</div>
+                <h3>Just &lt;r-preview src&gt;</h3>
+                <p>A standard custom element. Works with React, Vue, Svelte or plain HTML — no wrapper needed.</p>
+              </div>
+              <div class="cell">
+                <div class="k">CLIENT-SIDE</div>
+                <h3>No conversion server</h3>
+                <p>Files render in the browser. Nothing is uploaded, so it's safe for private documents.</p>
+              </div>
+              <div class="cell">
+                <div class="k">4 FORMATS</div>
+                <h3>PDF &amp; Office, one API</h3>
+                <p>
+                  PDF, DOCX, PPTX and XLSX behind a single
+                  <code>src</code> attribute.
+                </p>
+              </div>
+              <div class="cell">
+                <div class="k">?EMBED=1</div>
+                <h3>Chromeless iframe mode</h3>
+                <p>The same page collapses to a bare viewer for embedding — one build, two jobs.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-wrap">
+          <div>
+            <h2>Questions, answered</h2>
+            <p>Written so search and AI assistants can quote it verbatim.</p>
+          </div>
+          <div class="qa">
+            <details open>
+              <summary>How do I embed it in an iframe?</summary>
+              <p class="a">
+                Point the iframe at the preview page with <code>?embed=1</code>. The header, hero and footer are
+                removed. Pass <code>?src=&lt;url&gt;</code> to auto-load a document — it opens in a full-screen preview
+                that fills the frame.
+              </p>
+            </details>
+            <details>
+              <summary>Which formats are supported?</summary>
+              <p class="a">PDF, Word (DOCX), PowerPoint (PPTX) and Excel (XLSX / XLS), all rendered on the client.</p>
+            </details>
+            <details>
+              <summary>Do I need a backend or conversion service?</summary>
+              <p class="a">
+                No. Rendering happens entirely in the browser, so files never leave the user's device — no server
+                required.
+              </p>
+            </details>
+            <details>
+              <summary>How do I install it?</summary>
+              <p class="a">
+                Install from npm with <code>pnpm add @ranui/preview</code>, import it once, then use the
+                <code>&lt;r-preview src="…"&gt;</code> element anywhere.
+              </p>
+            </details>
+          </div>
+        </div>
+
+        <div class="eco">
+          <div class="eco-inner">
+            <span class="eco-label"
+              ><svg class="gitmark" viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+                /></svg
+              >Part of the ran ecosystem &middot; all open source</span
+            >
+            <nav>
+              <a href="https://edit.chaxus.com" rel="noopener"><b>edit.chaxus.com</b> <small>Office editor</small></a>
+              <span class="here"><b>@ranui/preview</b> <small>embed a file viewer</small></span>
+              <a href="https://ran.chaxus.com" rel="noopener"><b>ran.chaxus.com</b> <small>UI components</small></a>
+            </nav>
+          </div>
+        </div>
+
+        <footer class="foot">
+          <span>© 2026 @ranui/preview · renders on the client</span>
+          <nav>
+            <a href="#try">Demo</a>
+            <a href="#embed">Embed mode</a>
+            <a href="https://www.npmjs.com/package/@ranui/preview" rel="noopener">npm</a>
+            <a href="https://github.com/ranuts/fileview" rel="noopener">GitHub</a>
+          </nav>
+          <span class="lic">AGPL-3.0</span>
+        </footer>
+      </section>
+    </div>
+
+    <r-preview id="preview"></r-preview>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(location.search);
+        const preview = document.getElementById('preview');
+        if (!preview) return;
+
+        // <r-preview> is a trigger, not an inline viewer: on `src` it opens a
+        // body-level full-screen modal. It already sits at the end of <body>, so
+        // it survives hiding .landing-chrome in embed mode — no reparent needed.
+        if (window.__embedMode) {
+          document.body.classList.add('embed-mode');
+        }
+
+        // Only http(s)/blob URLs may be loaded; reject javascript:, data:, etc.
+        function isSafeSrc(value) {
+          try {
+            const url = new URL(value, location.href);
+            return url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'blob:';
+          } catch (e) {
+            return false;
+          }
+        }
+
+        // Auto-load a document from ?src= / ?file= (handy for embed mode).
+        // Gate on the element being defined: setting `src` on an un-upgraded
+        // element makes attributeChangedCallback fire before connectedCallback.
+        const src = params.get('src') || params.get('file');
+        if (src) {
+          customElements.whenDefined('r-preview').then(function () {
+            if (isSafeSrc(src)) {
+              preview.setAttribute('src', src);
+            } else {
+              console.warn('Ignored unsafe preview src:', src);
+            }
+          });
+        }
+
+        // Wire the "Choose a file" control to open the full-screen preview.
+        const chooseBtn = document.getElementById('choose-file');
+        if (chooseBtn) {
+          chooseBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.docx,.pptx,.pdf,.xlsx';
+            input.onchange = () => {
+              const file = input.files && input.files[0];
+              if (file) {
+                const objectUrl = URL.createObjectURL(file);
+                if (isSafeSrc(objectUrl)) preview.setAttribute('src', objectUrl);
+              }
+            };
+            input.click();
+          });
+        }
+      })();
+    </script>
+  </body>
 </html>

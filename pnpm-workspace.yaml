@@ -1,0 +1,6 @@
+# Own packages: exempt from the pnpm minimumReleaseAge cooldown so freshly
+# published alphas install immediately. Versioned entries don't satisfy the
+# pre-run lockfile verification — bare names are required.
+minimumReleaseAgeExclude:
+  - ranui
+  - ranuts

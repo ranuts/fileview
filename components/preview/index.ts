@@ -1,4 +1,5 @@
-import { Client, MessageCodec, create, noop } from 'ranuts/utils';
+import { Client, MessageCodec, noop } from 'ranuts/utils';
+import { Div, Slot, Span, Style, View } from 'ranui/builder';
 import { DOCX, PDF, PPTX, XLS, XLSX } from '@/components/preview/constant';
 import type { BaseReturn, RenderOptions } from '@/components/preview/types';
 import less from './index.less?inline';
@@ -7,8 +8,7 @@ import 'ranui/icon';
 
 const message = window.message;
 
-
-const TARGET_ORIGIN = 'https://ranuts.github.io/document';
+const TARGET_ORIGIN = 'https://edit.chaxus.com';
 
 interface RequestUrlToArraybufferOption {
   responseType: XMLHttpRequestResponseType;
@@ -27,9 +27,12 @@ interface requestUrlToArraybufferReturn extends BaseReturn {
 
 const renderOffice = async (file: File, options: RenderOptions) => {
   try {
-    const { iframe, onLoad, dom, baseUrl } = options;
+    const { iframe, iframeReady, onLoad, dom, baseUrl } = options;
     dom?.style.setProperty('display', 'none');
     if (!iframe) return;
+    // The editor only attaches its message listener once its JS runs; chunks
+    // posted before the iframe finishes loading are silently lost (no retry).
+    await iframeReady;
     Client.removeAll();
     const { id } = Client.connect({
       targetOrigin: new URL(baseUrl || TARGET_ORIGIN).origin,
@@ -114,13 +117,50 @@ async function Custom() {
       [XLS, renderOffice],
     ]);
 
+    const EXT_MIME: Record<string, string> = {
+      pdf: PDF,
+      docx: DOCX,
+      pptx: PPTX,
+      xlsx: XLSX,
+      xls: XLS,
+    };
+
+    const MIME_EXT: Record<string, string> = Object.fromEntries(Object.entries(EXT_MIME).map(([e, m]) => [m, e]));
+
+    // XHR blobs carry no filename, and servers frequently mislabel Office
+    // extensions (empty, application/octet-stream, even text/xml) — both would
+    // silently fail the renderFileMap lookup, so only trust a Content-Type we
+    // can actually render and otherwise recover name/type from the URL.
+    const inferFileMeta = (src: string, data: Blob & { name?: string }): { name: string; type: string } => {
+      let name = data.name || '';
+      if (!name) {
+        try {
+          name = decodeURIComponent(new URL(src, window.location.href).pathname.split('/').pop() || '');
+        } catch {
+          name = '';
+        }
+      }
+      if (!name) name = 'file';
+      const ext = name.split('.').pop()?.toLowerCase() || '';
+      const type = renderFileMap.has(data.type) ? data.type : EXT_MIME[ext] || data.type || '';
+      // Blob URLs name the file after an extensionless UUID, but the editor
+      // detects the format from the extension — recover it from the MIME type.
+      if (!EXT_MIME[ext] && MIME_EXT[type]) name = `${name}.${MIME_EXT[type]}`;
+      return { name, type };
+    };
+
     class CustomElement extends HTMLElement {
       static get observedAttributes() {
         return ['src', 'closeable'];
       }
       previewContextPdf?: HTMLDivElement;
-      _loadingText?: HTMLDivElement;
+      _loadingBadge?: HTMLSpanElement;
+      _loadingName?: HTMLSpanElement;
+      _loadingFill?: HTMLDivElement;
+      _loadingStatus?: HTMLSpanElement;
+      _loadingPct?: HTMLSpanElement;
       previewIframe?: HTMLIFrameElement;
+      _iframeReady?: Promise<void>;
       preview?: HTMLElement | null;
       previewContext?: HTMLDivElement;
       _slot: HTMLSlotElement;
@@ -130,12 +170,9 @@ async function Custom() {
       _editorWindow?: Window;
       constructor() {
         super();
-        this._div = document.createElement('div');
         this.preview = document.getElementById('r-preview-mask');
-        this._slot = document.createElement('slot');
-        this._div.appendChild(this._slot);
-        this._slot.setAttribute('class', 'r-preview-slot');
-        this._div.setAttribute('class', 'r-preview');
+        this._slot = Slot().class('r-preview-slot').build();
+        this._div = Div().class('r-preview').children(this._slot).build();
         const shadowRoot = this.attachShadow({ mode: 'closed' });
         shadowRoot.appendChild(this._div);
       }
@@ -164,32 +201,57 @@ async function Custom() {
         if (value) this.setAttribute('baseUrl', value);
       }
       createLoading = () => {
-        this._loadingElement = document.createElement('div');
-        this._loadingElement.setAttribute('class', 'r-preview-loading');
-        const icon = document.createElement('r-icon');
-        icon.setAttribute('name', 'loading');
-        icon.setAttribute('size', '100');
-        icon.setAttribute('color', '#1E90FF');
-        icon.setAttribute('spin', '');
-        this._loadingText = document.createElement('div');
-        this._loadingElement.appendChild(icon);
-        this._loadingText.setAttribute('class', 'r-preview-loading-text');
-        this._loadingElement.appendChild(this._loadingText);
+        this._loadingBadge = Span().class('r-preview-loading-badge').build();
+        this._loadingName = Span().class('r-preview-loading-name').build();
+        this._loadingFill = Div().class('r-preview-loading-bar-fill').build();
+        this._loadingStatus = Span().class('r-preview-loading-status').build();
+        this._loadingPct = Span().class('r-preview-loading-pct').build();
+        this._loadingElement = Div()
+          .class('r-preview-loading')
+          .children(
+            Div()
+              .class('r-preview-loading-card')
+              .children(
+                Div().class('r-preview-loading-head').children(this._loadingBadge, this._loadingName),
+                Div().class('r-preview-loading-bar').children(this._loadingFill),
+                Div().class('r-preview-loading-foot').children(this._loadingStatus, this._loadingPct),
+              ),
+          )
+          .build();
+        this.resetLoading();
         return this._loadingElement;
       };
-      onProgress = (event: ProgressEvent<EventTarget>) => {
-        const num = (event.loaded / event.total) * 100;
-        const progress = Math.min(99, num).toFixed(2) + '%';
-        if (this._loadingText && this._loadingElement) {
-          this._loadingText.innerText = `Loading ${progress}`;
-          if (num >= 100) {
-            setTimeout(() => {
-              if (this._loadingText) {
-                this._loadingText.innerText = `Loading...`;
-              }
-            }, 300);
-          }
+      resetLoading = () => {
+        this.setLoadingMeta('');
+        this.setLoadingProgress(0, 'Downloading…');
+      };
+      setLoadingMeta = (name: string) => {
+        if (!this._loadingBadge || !this._loadingName) return;
+        const ext = name.includes('.') ? name.split('.').pop()!.toUpperCase() : '';
+        this._loadingBadge.textContent = ext || 'FILE';
+        this._loadingName.textContent = name || 'Loading file…';
+      };
+      // percent: 0–100 drives the bar; null switches to the indeterminate shimmer.
+      setLoadingProgress = (percent: number | null, status: string) => {
+        if (!this._loadingElement || !this._loadingFill || !this._loadingStatus || !this._loadingPct) return;
+        this._loadingStatus.textContent = status;
+        if (percent === null) {
+          this._loadingElement.classList.add('is-indeterminate');
+          this._loadingPct.textContent = '';
+        } else {
+          this._loadingElement.classList.remove('is-indeterminate');
+          this._loadingFill.style.setProperty('width', `${percent}%`);
+          this._loadingPct.textContent = `${Math.round(percent)}%`;
         }
+      };
+      onProgress = (event: ProgressEvent<EventTarget>) => {
+        // No Content-Length → no meaningful total; fall back to the shimmer.
+        if (!event.total) {
+          this.setLoadingProgress(null, 'Downloading…');
+          return;
+        }
+        const num = Math.min(99, (event.loaded / event.total) * 100);
+        this.setLoadingProgress(num, 'Downloading…');
       };
       onError = () => {
         this.preview?.removeChild(this._loadingElement!);
@@ -198,23 +260,28 @@ async function Custom() {
       onLoad = () => {
         this.preview?.removeChild(this._loadingElement!);
         this.dispatchEvent(new CustomEvent('load', { bubbles: true, composed: true }));
+        this._loadingElement?.remove();
       };
       handleFile = async (file: string | File) => {
         try {
           if (typeof file === 'string') {
-            const { success, data, message } = await requestUrlToBuffer(file, {
+            const src = file;
+            const { success, data, message } = await requestUrlToBuffer(src, {
               onProgress: this.onProgress,
               onError: this.onError,
               responseType: 'blob',
             });
             if (success && data) {
-              file = new File([data], data.name, { type: data.type });
+              const { name, type } = inferFileMeta(src, data);
+              file = new File([data], name, { type });
             } else {
               warning(message);
             }
           }
           if (file instanceof File) {
             const { type } = file;
+            this.setLoadingMeta(file.name);
+            this.setLoadingProgress(null, 'Preparing preview…');
             const handler = renderFileMap.get(type);
             if (handler && this.previewContext) {
               this.previewContext.style.setProperty('width', '100%');
@@ -223,9 +290,13 @@ async function Custom() {
                 onError: this.onError,
                 onLoad: this.onLoad,
                 iframe: this.previewIframe,
+                iframeReady: this._iframeReady,
                 baseUrl: this.baseUrl,
               };
               handler(file, options);
+            } else {
+              warning(`Unsupported file type: ${type || '(unknown)'}`);
+              this.onError();
             }
           }
         } catch (error) {
@@ -254,10 +325,10 @@ async function Custom() {
             if (this.previewContextPdf && this.previewContext?.contains(this.previewContextPdf)) {
               this.previewContext.removeChild(this.previewContextPdf);
             }
-            this.previewContextPdf = document.createElement('div');
-            this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
+            this.previewContextPdf = Div().class('r-preview-context-pdf').build();
             this.previewContext?.appendChild(this.previewContextPdf);
-            this._loadingElement?.style.setProperty('display', 'block');
+            this.resetLoading();
+            this._loadingElement?.style.setProperty('display', 'flex');
           } else {
             this.preliminary();
           }
@@ -265,40 +336,42 @@ async function Custom() {
         }
       };
       preliminary = () => {
-        this.preview = document.createElement('div');
-        this.preview.setAttribute('class', 'r-preview-mask');
-        this.preview.setAttribute('id', 'r-preview-mask');
-        const previewOption = document.createElement('div');
-        previewOption.setAttribute('class', 'r-preview-options');
-        if (this.closeable !== 'false') {
-          const previewCloseButton = document.createElement('r-icon');
-          previewCloseButton.setAttribute('class', 'r-preview-options-close');
-          previewCloseButton.setAttribute('name', 'close-circle-fill');
-          previewCloseButton.setAttribute('size', '40');
-          previewCloseButton.addEventListener('click', this.closePreview);
-          previewOption.appendChild(previewCloseButton);
-        }
-        const previewContain = document.createElement('div');
-        previewContain.setAttribute('class', 'r-preview-contain');
-        this.previewContext = document.createElement('div');
-        this.previewContext.setAttribute('class', 'r-preview-context');
-        this.previewContextPdf = document.createElement('div');
-        this.previewContextPdf.setAttribute('class', 'r-preview-context-pdf');
-        this.previewContext.appendChild(this.previewContextPdf);
-        this.previewIframe = document.createElement('iframe');
-        this.previewIframe.setAttribute('src', this.baseUrl);
-        this.previewIframe.setAttribute('style', 'display: none;');
-        this.previewIframe.style.setProperty('margin-bottom', '30px');
+        this.previewContextPdf = Div().class('r-preview-context-pdf').build();
         // 添加权限策略设置，避免权限策略违规警告
-        this.previewIframe.setAttribute('allow', 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation');
-        this.previewIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals');
-        this.previewContext.appendChild(this.previewIframe);
-        previewContain.appendChild(this.previewContext);
-        this.preview.appendChild(previewOption);
-        this._loadingElement = this.createLoading();
-        this.preview.appendChild(this._loadingElement);
-        this.preview?.appendChild(previewContain);
-        this.preview.style.setProperty('display', 'none');
+        this.previewIframe = View<HTMLIFrameElement>('iframe')
+          .attrs({
+            allow: 'autoplay; camera; fullscreen; microphone; clipboard-write; display-capture; geolocation',
+            sandbox: 'allow-scripts allow-same-origin allow-forms allow-popups allow-modals',
+          })
+          .style({ display: 'none', 'margin-bottom': '30px' })
+          .build();
+        this._iframeReady = new Promise((resolve) => {
+          this.previewIframe!.addEventListener('load', () => resolve(), { once: true });
+        });
+        this.previewIframe.setAttribute('src', this.baseUrl);
+        this.previewContext = Div()
+          .class('r-preview-context')
+          .children(this.previewContextPdf, this.previewIframe)
+          .build();
+        this.preview = Div()
+          .class('r-preview-mask')
+          .id('r-preview-mask')
+          .style('display', 'none')
+          .children(
+            Div()
+              .class('r-preview-options')
+              .children(
+                this.closeable !== 'false'
+                  ? View('r-icon')
+                      .class('r-preview-options-close')
+                      .attrs({ name: 'close-circle-fill', size: '36', color: '#ffffff' })
+                      .on('click', this.closePreview)
+                  : null,
+              ),
+            this.createLoading(),
+            Div().class('r-preview-contain').children(this.previewContext),
+          )
+          .build();
         document.body.appendChild(this.preview);
       };
       connectedCallback() {
@@ -320,8 +393,7 @@ async function Custom() {
     }
     if (typeof document !== 'undefined' && !customElements.get('r-preview')) {
       customElements.define('r-preview', CustomElement);
-      const style = create('style').setTextContent(less);
-      document.body.appendChild(style.element);
+      document.body.appendChild(Style().text(less).build());
     }
   }
 }

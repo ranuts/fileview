@@ -9,5 +9,6 @@ export interface RenderOptions {
   onError?: (msg?: BaseReturn) => void;
   onLoad?: (msg?: BaseReturn) => void;
   iframe?: HTMLIFrameElement;
+  iframeReady?: Promise<void>;
   baseUrl?: string;
 }

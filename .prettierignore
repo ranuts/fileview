@@ -1,0 +1,9 @@
+dist/
+LICENSE.md
+pnpm-lock.yaml
+pnpm-workspace.yaml
+report
+public
+assets
+.agents/
+skills/
