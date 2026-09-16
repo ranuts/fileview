@@ -254,9 +254,12 @@ async function Custom() {
         this.setLoadingProgress(num, 'Downloading…');
       };
       onError = () => {
-        this._loadingElement?.remove();
+        this.preview?.removeChild(this._loadingElement!);
+        this.dispatchEvent(new CustomEvent('error', { bubbles: true, composed: true }));
       };
       onLoad = () => {
+        this.preview?.removeChild(this._loadingElement!);
+        this.dispatchEvent(new CustomEvent('load', { bubbles: true, composed: true }));
         this._loadingElement?.remove();
       };
       handleFile = async (file: string | File) => {
