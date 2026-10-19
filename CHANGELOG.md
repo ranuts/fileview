@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- Preserve unsaved Office edits when updating read-only mode or close-button visibility; serialize correlated mode changes without rebuilding the iframe.
+- Retry editor readiness negotiation for slow startup and retain legacy editable compatibility; stream legacy chunks with cancellation and acknowledgement backpressure.
+- Support ordinary HTTP hosts without `crypto.randomUUID`.
+- Make PDF canvases responsive and cap per-page backing pixels/DPR; add opt-in virtual rendering with bounded active canvases and explicit cancellation lifetime.
+- Expose the full custom element TypeScript API and safely identify constructors returned by manual registration.
+- Remove the unused production ranui dependency and obsolete style transformer.
+- Release demo-owned Blob URLs on replacement/disposal and explain the remote Office iframe privacy boundary.
+- Verify release source inputs and exact artifact integrity; make matching-version publish retries idempotent.
+
 ## 0.2.0
 
 - Restore bubbling, composed `load` and `error` events; emit only for the current operation.

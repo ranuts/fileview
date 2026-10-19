@@ -8,7 +8,7 @@
     <title>@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer</title>
     <meta
       name="description"
-      content="A framework-free web component that renders PDF, DOCX, PPTX and XLSX right in the browser. One tag — <r-preview src>. No backend, no upload, embeddable in any iframe."
+      content="A framework-free web component that renders PDF, DOCX, PPTX and XLSX right in the browser. One tag — <r-preview src>. Local PDF rendering; Office uses a configurable editor iframe."
     />
     <meta
       name="keywords"
@@ -25,7 +25,7 @@
     <meta property="og:title" content="@ranui/preview — Embed a PDF, Word, Excel &amp; PowerPoint Viewer" />
     <meta
       property="og:description"
-      content="One custom element that renders PDF, DOCX, PPTX and XLSX entirely on the client. No backend, no upload, embeddable in any iframe."
+      content="One custom element that renders PDF, DOCX, PPTX and XLSX entirely on the client. Local PDF rendering; Office uses a configurable editor iframe."
     />
     <meta property="og:url" content="https://fileview.chaxus.com/" />
 
@@ -43,7 +43,7 @@
         "@context": "https://schema.org",
         "@type": "SoftwareSourceCode",
         "name": "@ranui/preview",
-        "description": "A framework-free web component (<r-preview src>) that renders PDF, DOCX, PPTX and XLSX files entirely in the browser, with no backend and no upload.",
+        "description": "A framework-free web component (<r-preview src>) that renders PDF, DOCX, PPTX and XLSX files entirely in the browser, with local PDF rendering and a configurable Office editor iframe.",
         "url": "https://fileview.chaxus.com/",
         "codeRepository": "https://github.com/ranuts/fileview",
         "programmingLanguage": "TypeScript",
@@ -86,7 +86,7 @@
             "name": "Do I need a backend or conversion service?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No. Rendering happens entirely in the browser, so files never leave the user's device — no server required."
+              "text": "No conversion server is required. PDFs render locally. Office files are passed to the configured editor iframe, which can access their contents. Self-host that editor for private or intranet documents."
             }
           },
           {
@@ -399,7 +399,7 @@
       }
       .console::before {
         /* device label, top-left */
-        content: '\25AA renders on your device \2014 nothing leaves the client';
+        content: '\25AA local PDF \2014 configurable Office editor';
         position: absolute;
         top: 14px;
         left: 20px;
@@ -1160,7 +1160,7 @@
         <div class="try-wrap" id="try">
           <div class="try-head">
             <div class="t">
-              <b>Try it — your file never leaves this page</b>
+              <b>Try it — local PDF, configurable Office editor</b>
               <span>Pick a local .pdf .docx .pptx or .xlsx — it opens in a full-screen preview.</span>
             </div>
             <button class="btn primary" id="choose-file" type="button">
@@ -1199,7 +1199,10 @@
               <div class="cell">
                 <div class="k">CLIENT-SIDE</div>
                 <h3>No conversion server</h3>
-                <p>Files render in the browser. Nothing is uploaded, so it's safe for private documents.</p>
+                <p>
+                  PDFs render locally. Office files are passed to the configured editor iframe. Self-host the editor for
+                  private documents.
+                </p>
               </div>
               <div class="cell">
                 <div class="k">4 FORMATS</div>
@@ -1239,8 +1242,9 @@
             <details>
               <summary>Do I need a backend or conversion service?</summary>
               <p class="a">
-                No. Rendering happens entirely in the browser, so files never leave the user's device — no server
-                required.
+                No conversion server is required. PDFs render locally. Office files are passed to the configured editor
+                iframe (by default edit.chaxus.com), which can access their contents. Self-host that editor for private
+                or intranet documents.
               </p>
             </details>
             <details>
@@ -1322,18 +1326,33 @@
           });
         }
 
+        // Keep the selected file available for reopening, and release only URLs
+        // owned by this demo when the source is replaced or the page is discarded.
+        let ownedFileUrl;
+        function releaseSelectedFile() {
+          if (ownedFileUrl) URL.revokeObjectURL(ownedFileUrl);
+          ownedFileUrl = undefined;
+        }
+        new MutationObserver(() => {
+          if (ownedFileUrl && preview.getAttribute('src') !== ownedFileUrl) releaseSelectedFile();
+        }).observe(preview, { attributes: true, attributeFilter: ['src'] });
+        window.addEventListener('pagehide', (event) => {
+          if (!event.persisted) releaseSelectedFile();
+        });
+
         // Wire the "Choose a file" control to open the full-screen preview.
         const chooseBtn = document.getElementById('choose-file');
         if (chooseBtn) {
           chooseBtn.addEventListener('click', () => {
             const input = document.createElement('input');
             input.type = 'file';
-            input.accept = '.docx,.pptx,.pdf,.xlsx';
+            input.accept = '.docx,.pptx,.pdf,.xlsx,.xls';
             input.onchange = () => {
               const file = input.files && input.files[0];
               if (file) {
-                const objectUrl = URL.createObjectURL(file);
-                if (isSafeSrc(objectUrl)) preview.setAttribute('src', objectUrl);
+                releaseSelectedFile();
+                ownedFileUrl = URL.createObjectURL(file);
+                preview.setAttribute('src', ownedFileUrl);
               }
             };
             input.click();

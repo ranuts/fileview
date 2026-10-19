@@ -87,6 +87,71 @@ async function sdkState(page, timeout = 120_000) {
   throw new Error('Live SDK did not report fully loaded state within 120s');
 }
 
+async function verifyLiveUpdates(live, name) {
+  const { page } = live;
+  const marker = 'Fileview unsaved edit 0.3.0';
+  await page.evaluate(() => {
+    window.__originalOfficeFrame = document.querySelector('iframe');
+  });
+  if (name.endsWith('.docx')) {
+    let edited = false;
+    for (const frame of page.frames()) {
+      try {
+        edited = await frame.evaluate((marker) => {
+          const api = window.Asc?.editor;
+          if (!api?.isDocumentLoadComplete || typeof api.pluginMethod_InputText !== 'function') return false;
+          api.pluginMethod_InputText(marker);
+          return true;
+        }, marker);
+      } catch {
+        /* SDK frame may still be completing startup. */
+      }
+      if (edited) break;
+    }
+    assert.ok(edited, 'Live DOCX SDK must accept the unsaved edit');
+  }
+  const before = await request(page, 'document:get-state');
+  if (name.endsWith('.docx')) assert.equal(before.dirty, true, 'Real edit must mark document dirty');
+  await page.evaluate(() => {
+    document.querySelector('r-preview').closeable = 'false';
+  });
+  assert.equal(await page.getByRole('button', { name: 'Close preview' }).count(), 0);
+  for (const readonly of [true, false]) {
+    await page.evaluate((readonly) => {
+      document.querySelector('r-preview').readonly = readonly;
+    }, readonly);
+    await page.waitForFunction(
+      (readonly) =>
+        window.__officeSmoke.messages.some(
+          (item) => item.type === 'document:readonly-changed' && item.payload?.readonly === readonly,
+        ),
+      readonly,
+      { timeout: 120_000 },
+    );
+    const state = await request(page, 'document:get-state');
+    assert.equal(state.readonly, readonly);
+    assert.equal(state.dirty, before.dirty, 'Mode toggle must retain dirty state');
+    assert.equal((await sdkState(page)).restrictions, readonly ? 128 : 0);
+    assert.equal(await page.evaluate(() => document.querySelector('iframe') === window.__originalOfficeFrame), true);
+  }
+  await page.evaluate(() => {
+    document.querySelector('r-preview').closeable = 'true';
+  });
+  assert.equal(await page.getByRole('button', { name: 'Close preview' }).count(), 1);
+  if (name.endsWith('.docx')) {
+    const saved = await request(page, 'document:save', { targetExt: 'docx' });
+    const bytes = Buffer.from(saved.base64, 'base64');
+    const xml = new TextDecoder().decode(await readZipEntry(bytes, 'word/document.xml'));
+    const text = [...xml.matchAll(/<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g)].map((match) => match[1]).join('');
+    assert.ok(text.includes(marker), 'Saved DOCX must retain edit through UI and mode changes');
+    await writeFile(`${output}/updated-${name}`, bytes);
+  }
+  const host = await page.evaluate(() => window.__officeSmoke);
+  assert.deepEqual(host.errors, []);
+  assert.equal(host.loads, 1, 'UI and mode updates must not reopen the file');
+  return { dirtyBefore: before.dirty, preservedIframe: true, retainedEdit: name.endsWith('.docx'), loads: host.loads };
+}
+
 async function open(name, bytes, readonly) {
   const context = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
@@ -103,6 +168,11 @@ async function open(name, bytes, readonly) {
     }),
   );
   const errors = [];
+  const resourceFailures = [];
+  page.on('requestfailed', (request) => resourceFailures.push({ url: request.url(), failure: request.failure() }));
+  page.on('response', (response) => {
+    if (response.status() >= 400) resourceFailures.push({ url: response.url(), status: response.status() });
+  });
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(`${base}/test/fixtures/preview.html`);
   await page.evaluate(
@@ -152,6 +222,18 @@ async function open(name, bytes, readonly) {
     return { context, page, state, sdk, errors, hostMessages: host.messages.map((item) => item.type) };
   } catch (error) {
     await page.screenshot({ path: `${output}/${name}-failure.png` }).catch(() => {});
+    await writeFile(
+      `${output}/${name}-diagnostics.json`,
+      JSON.stringify(
+        {
+          errors,
+          resourceFailures,
+          host: await page.evaluate(() => window.__officeSmoke).catch(() => null),
+        },
+        null,
+        2,
+      ),
+    );
     await context.close();
     throw error;
   }
@@ -168,6 +250,7 @@ try {
     const result = { name };
     try {
       live = await open(name, build(), readonly);
+      const updates = readonly ? undefined : await verifyLiveUpdates(live, name);
       let saveError = '';
       try {
         if (readonly) await request(live.page, 'document:save');
@@ -180,6 +263,7 @@ try {
         state: live.state,
         sdk: live.sdk,
         saveError,
+        updates,
         hostMessages: live.hostMessages,
         pageErrors: live.errors,
       });
