@@ -5,6 +5,8 @@
   <body>
     <script type="module">
       import { MessageCodec, Platform } from 'ranuts/utils';
+      const initDelay = Number(new URLSearchParams(location.search).get('initDelay')) || 0;
+      if (initDelay) await new Promise((resolve) => setTimeout(resolve, initDelay));
       window.chunks = [];
       Platform.init({
         async RENDER_OFFICE(chunk) {
