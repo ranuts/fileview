@@ -25,6 +25,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.release.tag_name || github.sha }}
+          fetch-depth: 0
       - uses: pnpm/action-setup@v6
         with:
           version: 11.6.0
@@ -32,19 +33,13 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Validate stable release version
+      - name: Validate stable release version and tagged package source
         env:
           RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
-        run: |
-          node --input-type=module <<'NODE'
-          import assert from 'node:assert/strict';
-          import { readFileSync } from 'node:fs';
-          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
-          assert.match(version, /^\d+\.\d+\.\d+$/);
-          assert.equal(process.env.RELEASE_TAG, `v${version}`);
-          NODE
+        run: node scripts/verify-release-source.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      - run: pnpm test:release
       - run: pnpm format:check
       - run: pnpm exec playwright install --with-deps
       - run: pnpm test
@@ -54,7 +49,10 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: npm-tarball
-          path: artifacts/*.tgz
+          path: |
+            artifacts/*.tgz
+            artifacts/release.json
+            artifacts/publish-release.mjs
           if-no-files-found: error
           retention-days: 7
 
@@ -76,9 +74,4 @@ jobs:
           name: npm-tarball
           path: artifacts
       - name: Publish the verified tarball through npm trusted publishing
-        run: |
-          set -eu
-          set -- artifacts/*.tgz
-          [ "$#" -eq 1 ]
-          [ -f "$1" ]
-          npm publish "$PWD/$1" --ignore-scripts --access public --provenance --tag latest
+        run: node artifacts/publish-release.mjs artifacts/release.json

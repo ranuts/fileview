@@ -1,3 +1,4 @@
+import { storeVerifiedArtifact } from './release-artifact.mjs';
 import { verifyBrowserPackage } from '../test/package-browser.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
@@ -27,7 +28,8 @@ const run = (command, arguments_, cwd, capture = false) => {
 try {
   let tarball = option('--tarball');
   if (!tarball) {
-    const destination = option('--out-dir') ?? temporary;
+    // Pack into scratch space so reruns cannot overwrite a previously verified archive.
+    const destination = temporary;
     await mkdir(destination, { recursive: true });
     const packed = JSON.parse(
       run('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', destination], root, true),
@@ -156,7 +158,12 @@ console.log('SSR manual import and public module resolution passed');\n`,
   compile('ESNext', 'Bundler', ['consumer.ts', 'react.tsx']);
   run(resolve(root, 'node_modules/.bin/publint'), ['run', installed, '--strict', '--pack', 'false'], root);
   await verifyBrowserPackage(installed, root);
-  console.log(`Verified installed tarball ${tarball}`);
+  const destination = option('--out-dir');
+  if (destination) {
+    await storeVerifiedArtifact({ tarball, destination, name: manifest.name, version: manifest.version });
+    await cp(resolve(root, 'scripts/publish-release.mjs'), resolve(destination, 'publish-release.mjs'));
+  }
+  console.log(`Verified installed tarball ${tarball}${destination ? `; stored artifact in ${destination}` : ''}`);
 } finally {
   await rm(temporary, { recursive: true, force: true });
 }
