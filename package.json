@@ -1,6 +1,6 @@
 {
   "name": "@ranui/preview",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Browser-native PDF and Office file preview with configurable self-hosted rendering",
   "main": "dist/umd/index.umd.cjs",
   "module": "dist/index.js",
@@ -31,7 +31,8 @@
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check .",
     "test:package": "node ./scripts/verify-package.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "test:release": "node --test test/release.test.mjs test/release-source.test.mjs"
   },
   "files": [
     "dist"
@@ -92,7 +93,6 @@
     "publint": "0.3.25"
   },
   "dependencies": {
-    "ranui": "0.5.0",
     "ranuts": "0.5.0"
   },
   "packageManager": "pnpm@11.6.0"
