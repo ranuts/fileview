@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Embed API fixture</title>
+  </head>
+  <body>
+    <script>
+      const state = { readonly: false, hasDocument: false };
+      addEventListener('message', async (event) => {
+        if (event.source !== parent || event.origin !== location.origin) return;
+        const { id, type, payload } = event.data || {};
+        if (type === 'document:get-state')
+          parent.postMessage({ id, type: 'document:state', payload: state }, event.origin);
+        if (type === 'document:open-file') {
+          state.readonly = payload.readonly;
+          state.hasDocument = true;
+          document.body.textContent = `${payload.file.name}:${state.readonly}`;
+          parent.postMessage({ id, type: 'document:opened', payload: state }, event.origin);
+        }
+      });
+      addEventListener('load', () => parent.postMessage({ type: 'document:ready' }, location.origin));
+    </script>
+  </body>
+</html>
