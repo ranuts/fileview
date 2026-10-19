@@ -1,162 +1,119 @@
-import { isSafari } from 'ranuts/utils';
-import { View } from 'ranui/builder';
-import { loadScript } from '@/utils/index';
-// copy from: https://github.com/mozilla/pdfjs-dist/blob/master/build/pdf.min.js
-import PDF_JS from '@/assets/js/pdf.min.js?raw';
-// copy from：https://github.com/mozilla/pdfjs-dist/blob/master/build/pdf.worker.min.js
-import PDF_WORKER_JS from '@/assets/js/pdf.worker.min.js?raw';
-import type { BaseReturn, RenderOptions } from '@/components/preview/types';
+import { getDocument, PDFWorker } from 'pdfjs-dist';
+import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
+import PDF_WORKER_JS from 'pdfjs-dist/build/pdf.worker.min.mjs?raw';
+import type { RenderOptions } from '@/components/preview/types';
 
-export interface Viewport {
-  width: number;
-  height: number;
-  viewBox: Array<number>;
-}
+const PDF_ASSETS = new URL(__FILEVIEW_PDF_ASSET_BASE__, import.meta.url);
 
-export interface RenderContext {
-  canvasContext: CanvasRenderingContext2D | null;
-  transform: Array<number>;
-  viewport: Viewport;
-}
-
-export interface PDFPageProxy {
-  pageNumber: number;
-  getViewport: ({ scale }: { scale: number }) => Viewport;
-  render: (options: RenderContext) => void;
-}
-
-export interface PDFDocumentProxy {
-  numPages: number;
-  getPage: (x: number) => Promise<PDFPageProxy>;
-}
-
-export class PdfPreview {
-  private pdfDoc: PDFDocumentProxy | undefined;
-  pageNumber: number;
-  total: number;
-  dom: HTMLElement;
-  pdf: string | ArrayBuffer;
-  onError: ((msg: BaseReturn) => void) | undefined;
-  onLoad: ((msg: BaseReturn) => void) | undefined;
-  constructor(pdf: string | ArrayBuffer, options: RenderOptions) {
-    const { dom, onError, onLoad } = options;
-    this.pageNumber = 1;
-    this.total = 0;
-    this.pdfDoc = undefined;
-    this.pdf = pdf;
-    this.dom = dom ? dom : document.body;
-    this.onError = onError;
-    this.onLoad = onLoad;
-  }
-  private getPdfPage = (number: number) => {
-    return new Promise((resolve, reject) => {
-      if (this.pdfDoc) {
-        this.pdfDoc.getPage(number).then((page: PDFPageProxy) => {
-          // safari 上有兼容性问题
-          const scale = isSafari() ? Math.min(window.devicePixelRatio, 2) : window.devicePixelRatio || 1;
-          const viewport = page.getViewport({ scale });
-          const canvas = View<HTMLCanvasElement>('canvas').style('margin', '0 auto').build();
-          // this.dom.innerHTML = ''
-          this.dom.appendChild(canvas);
-          const context = canvas.getContext('2d');
-          const clientWidth = document.body.clientWidth - 20;
-          const { width } = viewport;
-          const baseRadio = width > clientWidth ? clientWidth / width : 1;
-          canvas.width = viewport.width * scale;
-          canvas.height = viewport.height * scale;
-          canvas.style.width = Math.floor(viewport.width) * baseRadio + 'px';
-          canvas.style.height = Math.floor(viewport.height) * baseRadio + 'px';
-          const renderContext = {
-            canvasContext: context,
-            viewport: viewport,
-            // 线性变换矩阵：[a, b, c, d, e, f]。a 和 d 控制缩放。b 和 c 控制倾斜（skew）。e 和 f：控制平移（translate）。
-            transform: [scale, 0, 0, scale, 0, 0],
-          };
-          page.render(renderContext);
-          resolve({ success: true, data: page });
-        });
-      } else {
-        reject({ success: false, data: null, message: 'pdfDoc is undefined' });
-      }
-    });
-  };
-  pdfPreview = (): Promise<BaseReturn> => {
-    return new Promise((resolve) => {
-      const workerBlob = new Blob([PDF_WORKER_JS], { type: 'application/javascript' });
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
-      const workerUrl = URL.createObjectURL(workerBlob);
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-      window.pdfjsLib.getDocument(this.pdf).promise.then(async (doc: PDFDocumentProxy) => {
-        this.pdfDoc = doc;
-        this.total = doc.numPages;
-        this.onLoad && this.onLoad({ success: true, data: this.pdfDoc });
-        await this.getPdfPage(this.pageNumber);
-        resolve({ success: true, data: this.pdfDoc });
-      });
-    });
-  };
-  showTotalPage = async (): Promise<void> => {
-    for (let i = 1; i <= this.total; i++) {
-      await this.getPdfPage(i);
-    }
-  };
-  changePage = (num: number): number => {
-    if (num > 0 && num <= this.total) {
-      this.pageNumber = num;
-      this.getPdfPage(this.pageNumber);
-    }
-    return this.pageNumber;
-  };
-  prevPage = async (): Promise<number> => {
-    if (this.pageNumber > 1) {
-      this.pageNumber -= 1;
-    } else {
-      this.pageNumber = 1;
-    }
-    await this.getPdfPage(this.pageNumber);
-    return this.pageNumber;
-  };
-  nextPage = async (): Promise<number> => {
-    if (this.pageNumber < this.total) {
-      this.pageNumber += 1;
-    } else {
-      this.pageNumber = this.total;
-    }
-    await this.getPdfPage(this.pageNumber);
-    return this.pageNumber;
-  };
-}
-
-const createReader = (file: File): Promise<string | ArrayBuffer | null> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => {
-      resolve(reader.result);
-    };
-    reader.onerror = (error) => {
-      reject(error);
-    };
-    reader.onabort = (abort) => {
-      reject(abort);
-    };
-  });
-};
-
+/** Render every page with an owned worker, so concurrent previews can be cancelled independently. */
 export const renderPdf = async (file: File, options: RenderOptions): Promise<void> => {
+  const { signal } = options;
+  if (signal?.aborted) return;
+
+  const dom = options.dom ?? document.body;
+  const canvases: HTMLCanvasElement[] = [];
+  let workerUrl: string | undefined;
+  let port: Worker | undefined;
+  let worker: PDFWorker | undefined;
+  let loadingTask: ReturnType<typeof getDocument> | undefined;
+  let renderTask: RenderTask | undefined;
+  let pdf: PDFDocumentProxy | undefined;
+  let completed = false;
+  let workerFailed = false;
+  let interrupt: (reason: unknown) => void = () => {};
+  const interrupted = new Promise<never>((_, reject) => {
+    interrupt = reject;
+  });
+  // Cancellation can arrive between awaits; keep its rejection handled until the next race.
+  void interrupted.catch(() => {});
+  const wait = <T>(promise: Promise<T>): Promise<T> => Promise.race([promise, interrupted]);
+  const abort = () => {
+    renderTask?.cancel();
+    interrupt(new DOMException('PDF rendering aborted', 'AbortError'));
+  };
+  const workerError = (event: ErrorEvent | MessageEvent) => {
+    workerFailed = true;
+    interrupt(event instanceof ErrorEvent ? new Error(event.message) : new Error('PDF worker message failed'));
+  };
+  signal?.addEventListener('abort', abort, { once: true });
+
   try {
-    if (typeof window !== 'undefined') {
-      loadScript({ type: 'content', content: PDF_JS });
-      const pdf = await createReader(file);
-      if (pdf) {
-        const { dom } = options;
-        dom?.style.setProperty('display', 'flex');
-        const PDF = new PdfPreview(pdf, options);
-        await PDF.pdfPreview();
-        await PDF.showTotalPage();
+    const data = new Uint8Array(await wait(file.arrayBuffer()));
+    signal?.throwIfAborted();
+    workerUrl = URL.createObjectURL(new Blob([PDF_WORKER_JS], { type: 'text/javascript' }));
+    port = new Worker(workerUrl, { type: 'module' });
+    port.addEventListener('error', workerError);
+    port.addEventListener('messageerror', workerError);
+    worker = PDFWorker.create({ port });
+    loadingTask = getDocument({
+      data,
+      worker,
+      cMapUrl: new URL('cmaps/', PDF_ASSETS).href,
+      cMapPacked: true,
+      standardFontDataUrl: new URL('standard_fonts/', PDF_ASSETS).href,
+      wasmUrl: new URL('wasm/', PDF_ASSETS).href,
+      useSystemFonts: false,
+    });
+    pdf = await wait(loadingTask.promise);
+    dom.style.setProperty('display', 'flex');
+    dom.style.setProperty('flex-direction', 'column');
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      signal?.throwIfAborted();
+      const page = await wait(pdf.getPage(pageNumber));
+      try {
+        signal?.throwIfAborted();
+        const baseViewport = page.getViewport({ scale: 1 });
+        const availableWidth = dom.clientWidth || baseViewport.width;
+        const viewport = page.getViewport({ scale: Math.min(1, availableWidth / baseViewport.width) });
+        const density = window.devicePixelRatio || 1;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width * density);
+        canvas.height = Math.ceil(viewport.height * density);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+        canvas.style.margin = '0 auto';
+        canvas.style.flexShrink = '0';
+        const canvasContext = canvas.getContext('2d');
+        if (!canvasContext) throw new Error('PDF rendering requires a 2D canvas context');
+        canvases.push(canvas);
+        dom.append(canvas);
+        renderTask = page.render({
+          canvas,
+          canvasContext,
+          viewport,
+          transform: density === 1 ? undefined : [density, 0, 0, density, 0, 0],
+        });
+        await wait(renderTask.promise);
+        renderTask = undefined;
+      } finally {
+        page.cleanup();
       }
     }
+    signal?.throwIfAborted();
+    completed = true;
   } catch (error) {
-    console.log('renderPdf', error);
+    if (!signal?.aborted) throw error;
+  } finally {
+    renderTask?.cancel();
+    if (loadingTask) {
+      const destruction = loadingTask.destroy();
+      // A crashed worker cannot acknowledge PDF.js's termination message.
+      if (workerFailed) void destruction.catch(() => {});
+      else await destruction.catch(() => {});
+    }
+    worker?.destroy();
+    port?.removeEventListener('error', workerError);
+    port?.removeEventListener('messageerror', workerError);
+    port?.terminate();
+    if (workerUrl) URL.revokeObjectURL(workerUrl);
+    signal?.removeEventListener('abort', abort);
+    if (!completed || signal?.aborted) {
+      for (const canvas of canvases) {
+        canvas.remove();
+        canvas.width = canvas.height = 0;
+      }
+    }
   }
+  if (completed && !signal?.aborted) options.onLoad?.({ success: true, data: pdf });
 };
