@@ -3,6 +3,12 @@ name: Publish npm release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Stable version tag to publish from the selected workflow ref
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -13,12 +19,12 @@ concurrency:
 
 jobs:
   verify:
-    if: github.event.release.prerelease == false
+    if: github.event_name == 'workflow_dispatch' || github.event.release.prerelease == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.release.tag_name || github.sha }}
       - uses: pnpm/action-setup@v6
         with:
           version: 11.6.0
@@ -28,7 +34,7 @@ jobs:
           cache: pnpm
       - name: Validate stable release version
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
         run: |
           node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
@@ -75,4 +81,4 @@ jobs:
           set -- artifacts/*.tgz
           [ "$#" -eq 1 ]
           [ -f "$1" ]
-          npm publish "$1" --ignore-scripts --access public --provenance --tag latest
+          npm publish "$PWD/$1" --ignore-scripts --access public --provenance --tag latest
