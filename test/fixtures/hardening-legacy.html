@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Legacy chunk acknowledgement fixture</title>
+  <body>
+    <script type="module">
+      import { MessageCodec, Platform } from 'ranuts/utils';
+      window.chunks = [];
+      Platform.init({
+        async RENDER_OFFICE(chunk) {
+          window.chunks.push(chunk);
+          if (new URLSearchParams(location.search).has('pause'))
+            await new Promise((resolve) => (window.releaseChunk = resolve));
+          if (window.chunks.length === chunk.totalChunks) {
+            const file = await MessageCodec.decodeFileChunked(window.chunks);
+            window.received = {
+              name: file.name,
+              type: file.type,
+              lastModified: file.lastModified,
+              bytes: Array.from(new Uint8Array(await file.arrayBuffer())),
+            };
+            const input = document.createElement('input');
+            input.setAttribute('aria-label', 'Unsaved legacy document text');
+            input.value = file.name;
+            document.body.append(input);
+            document.body.dataset.complete = 'true';
+          }
+          return { success: true };
+        },
+      });
+    </script>
+  </body>
+</html>

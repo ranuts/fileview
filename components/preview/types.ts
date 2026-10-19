@@ -5,6 +5,8 @@ export interface BaseReturn<T = unknown> {
 }
 
 export interface RenderOptions {
+  /** Virtual PDF rendering retains resources until signal aborts; completion means the first viewport is ready. */
+  mode?: 'eager' | 'virtual';
   signal?: AbortSignal;
   dom?: HTMLElement;
   onError?: (msg?: BaseReturn) => void;

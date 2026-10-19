@@ -1,5 +1,6 @@
 import { DOCX, PDF, PPTX, XLS, XLSX } from './constant';
-import { renderOffice } from './office';
+import { renderOffice, type OfficeSession } from './office';
+import { createRequestId } from './request-id';
 import less from './index.less?inline';
 
 const DEFAULT_RENDERER = 'https://edit.chaxus.com';
@@ -15,12 +16,15 @@ function div(className: string, ...children: Node[]): HTMLDivElement {
 
 /** Browser implementation, loaded only when registration is explicitly requested. */
 export class PreviewElement extends HTMLElement {
-  static observedAttributes = ['src', 'closeable', 'readonly', 'baseurl', 'label'];
+  static observedAttributes = ['src', 'closeable', 'readonly', 'baseurl', 'label', 'pdf-mode'];
   private modal?: HTMLDivElement;
   private context?: HTMLDivElement;
   private loading?: HTMLDivElement;
   private closeButton?: HTMLButtonElement;
   private operation?: AbortController;
+  private officeSession?: OfficeSession;
+  private activePdf = false;
+  private modeError?: HTMLDivElement;
   private previousFocus?: HTMLElement;
   private focusFrame?: number;
 
@@ -68,6 +72,14 @@ export class PreviewElement extends HTMLElement {
     else this.removeAttribute('readonly');
   }
 
+  /** Eager paints every page before load; virtual paints the initial viewport and buffer. */
+  get pdfMode(): 'eager' | 'virtual' {
+    return this.getAttribute('pdf-mode') === 'virtual' ? 'virtual' : 'eager';
+  }
+  set pdfMode(value: 'eager' | 'virtual') {
+    this.setAttribute('pdf-mode', value);
+  }
+
   connectedCallback() {
     if (!this.hasAttribute('role')) this.setAttribute('role', 'button');
     if (!this.hasAttribute('tabindex')) this.tabIndex = 0;
@@ -84,6 +96,7 @@ export class PreviewElement extends HTMLElement {
     this.closePreview(false);
     this.modal?.remove();
     this.modal = undefined;
+    this.closeButton = undefined;
   }
   attributeChangedCallback(name: string, oldValue: string | null, value: string | null) {
     if (oldValue === value || !this.isConnected) return;
@@ -91,7 +104,13 @@ export class PreviewElement extends HTMLElement {
     else if (name === 'src') {
       if (value) this.showPreview();
       else this.closePreview();
-    } else if (this.modal?.style.display !== 'none' && this.modal) this.showPreview();
+    } else if (this.modal?.style.display !== 'none' && this.modal) {
+      if (name === 'closeable') this.updateCloseButton();
+      else if (name === 'readonly') this.updateReadonly();
+      else if (name === 'pdf-mode') {
+        if (this.activePdf) this.showPreview();
+      } else this.showPreview();
+    }
   }
   private triggerKeydown = (event: KeyboardEvent) => {
     if (event.target === this && (event.key === 'Enter' || event.key === ' ')) {
@@ -121,6 +140,10 @@ export class PreviewElement extends HTMLElement {
   closePreview = (restoreFocus: boolean | Event = true) => {
     this.operation?.abort();
     this.operation = undefined;
+    this.officeSession = undefined;
+    this.activePdf = false;
+    this.modeError?.remove();
+    this.modeError = undefined;
     this.context?.replaceChildren();
     if (this.modal) this.modal.style.display = 'none';
     if (this.focusFrame !== undefined) cancelAnimationFrame(this.focusFrame);
@@ -141,7 +164,7 @@ export class PreviewElement extends HTMLElement {
     this.context = div('r-preview-context');
     this.modal = div('r-preview-mask');
     this.modal.id = document.getElementById('r-preview-mask')
-      ? `r-preview-mask-${crypto.randomUUID()}`
+      ? `r-preview-mask-${createRequestId()}`
       : 'r-preview-mask';
     this.modal.setAttribute('role', 'dialog');
     this.modal.setAttribute('aria-label', 'File preview');
@@ -152,6 +175,8 @@ export class PreviewElement extends HTMLElement {
   }
   private updateCloseButton() {
     const options = this.modal!.querySelector('.r-preview-options')!;
+    const hadFocus = this.closeButton === document.activeElement;
+    if (Boolean(this.closeButton) === (this.closeable !== 'false')) return;
     options.replaceChildren();
     this.closeButton = undefined;
     if (this.closeable !== 'false') {
@@ -164,6 +189,23 @@ export class PreviewElement extends HTMLElement {
       options.append(button);
       this.closeButton = button;
     }
+    if (hadFocus) (this.closeButton || this.modal)?.focus();
+  }
+  private reportSessionError(error: unknown, controller: AbortController) {
+    if (controller.signal.aborted || this.operation !== controller || !this.isConnected) return;
+    this.modeError?.remove();
+    this.modeError = div('r-preview-error');
+    this.modeError.setAttribute('role', 'alert');
+    this.modeError.textContent = error instanceof Error ? error.message : String(error);
+    this.context!.append(this.modeError);
+    this.dispatchEvent(new CustomEvent('error', { bubbles: true, composed: true, detail: error }));
+  }
+  private updateReadonly() {
+    if (!this.officeSession || !this.operation) return;
+    const controller = this.operation;
+    this.modeError?.remove();
+    this.modeError = undefined;
+    void this.officeSession.setReadonly(this.readonly).catch((error) => this.reportSessionError(error, controller));
   }
   private createLoading() {
     const badge = document.createElement('span');
@@ -195,6 +237,10 @@ export class PreviewElement extends HTMLElement {
   showPreview = () => {
     if (!this.src || !this.isConnected) return;
     this.operation?.abort();
+    this.officeSession = undefined;
+    this.activePdf = false;
+    this.modeError?.remove();
+    this.modeError = undefined;
     const controller = new AbortController();
     this.operation = controller;
     if (!this.modal) this.createModal();
@@ -236,11 +282,22 @@ export class PreviewElement extends HTMLElement {
       this.loading!.querySelector('.r-preview-loading-name')!.textContent = name;
       this.loading!.querySelector('.r-preview-loading-badge')!.textContent = name.split('.').pop()!.toUpperCase();
       if (type === PDF) {
+        this.activePdf = true;
         const container = div('r-preview-context-pdf');
         this.context!.append(container);
         const { renderPdf } = await import('./pdf');
         signal.throwIfAborted();
-        await renderPdf(file, { dom: container, signal });
+        let backgroundError = false;
+        await renderPdf(file, {
+          dom: container,
+          signal,
+          mode: this.pdfMode,
+          onError: (result) => {
+            if (backgroundError || !current()) return;
+            backgroundError = true;
+            this.reportSessionError(new Error(result?.message || 'PDF rendering failed'), controller);
+          },
+        });
       } else {
         const iframe = document.createElement('iframe');
         iframe.title = 'Document preview';
@@ -251,7 +308,20 @@ export class PreviewElement extends HTMLElement {
         this.context!.append(iframe);
         const url = new URL(this.baseUrl, location.href);
         if (!['https:', 'http:'].includes(url.protocol)) throw new Error('baseUrl must be an HTTP(S) renderer URL');
-        await renderOffice(file, { iframe, url, readonly: this.readonly, signal });
+        const preview = this;
+        const session = await renderOffice(file, {
+          iframe,
+          url,
+          signal,
+          get readonly() {
+            return preview.readonly;
+          },
+        });
+        if (!current()) return;
+        this.officeSession = session;
+        // Attribute changes during fetch/readiness/open apply to this same editor.
+        if (this.readonly !== session.initialReadonly)
+          await session.setReadonly(this.readonly).catch((error) => this.reportSessionError(error, controller));
       }
       if (!current()) return;
       this.loading?.remove();
