@@ -9,7 +9,7 @@ or conversion server is required by this package.
 ## Install and automatic registration
 
 ```sh
-npm install @ranui/preview@0.2.0
+npm install @ranui/preview@0.3.0
 ```
 
 ```ts
@@ -53,20 +53,21 @@ The existing root namespace (`import { preview } from '@ranui/preview'`),
 
 ## API
 
-| Attribute / property  | Default                        | Behavior                                                                                                    |
-| --------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `src`                 | unset                          | PDF, DOCX, PPTX, XLSX or XLS URL; setting it opens the preview                                              |
-| `baseUrl` / `baseurl` | `https://edit.chaxus.com`      | Office editor deployment URL, including a path/query if needed                                              |
-| `readonly`            | false                          | Opt-in Office read-only mode; empty attribute or property `true` enables it; `readonly="false"` disables it |
-| `closeable`           | enabled                        | Set `closeable="false"` to hide the close control and disable Escape dismissal                              |
-| `label`               | trigger text or “Preview file” | Accessible name of the trigger                                                                              |
+| Attribute / property   | Default                        | Behavior                                                                                                    |
+| ---------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `src`                  | unset                          | PDF, DOCX, PPTX, XLSX or XLS URL; setting it opens the preview                                              |
+| `baseUrl` / `baseurl`  | `https://edit.chaxus.com`      | Office editor deployment URL, including a path/query if needed                                              |
+| `readonly`             | false                          | Opt-in Office read-only mode; empty attribute or property `true` enables it; `readonly="false"` disables it |
+| `closeable`            | enabled                        | Set `closeable="false"` to hide the close control and disable Escape dismissal                              |
+| `pdfMode` / `pdf-mode` | `eager`                        | PDF rendering mode: all pages, or opt-in viewport rendering with `virtual`                                  |
+| `label`                | trigger text or “Preview file” | Accessible name of the trigger                                                                              |
 
 `src`, `label`, `baseUrl` and `closeable` retain their string property contracts;
-`readonly` is a boolean property. Use attributes before registration completes.
+`readonly` is a boolean property; `pdfMode` accepts `eager` or `virtual`. Use attributes before registration completes.
 Call `showPreview()` or `closePreview()` after upgrading the element.
 
-`load` fires once when all PDF pages finish painting or the Office editor confirms
-opening. `error` fires once on a download, unsupported format or renderer error;
+`load` fires once when all PDF pages finish painting (default), the initial viewport
+and buffer finish painting (`pdf-mode="virtual"`), or the Office editor confirms opening. `error` fires once on a download, unsupported format or renderer error;
 its `detail` contains the error. Both events bubble and cross shadow boundaries.
 Replacing the source, closing or disconnecting cancels the active operation and
 suppresses its obsolete events. Each element owns its dialog, iframe and worker.
@@ -87,9 +88,38 @@ messages only from that iframe and its configured origin.
 Existing deployments using the `RENDER_OFFICE` chunk protocol remain supported
 in the default editable mode. An old renderer without the embed API cannot
 promise enforced read-only mode: requesting it returns an explicit error asking
-you to update the deployment. Updating `readonly` while open reloads the file in
-the requested mode. This controls editing in the renderer; it does not prevent
+you to update the deployment. Updating `readonly` while open uses
+`document:set-readonly` without reloading the file, preserving unsaved edits. Changing
+`closeable` only updates the dialog control. Mode-change errors emit `error` while
+leaving the existing editor available. This controls editing in the renderer; it does not prevent
 users from downloading or copying bytes they already have access to.
+
+## PDF rendering and memory
+
+PDF canvases resize with their container. Backing stores are capped at DPR 2,
+4,194,304 pixels per page and 8,192 pixels per dimension; unusually large pages
+trade resolution for bounded allocation. Default `eager` mode still paints every
+page before `load`, so total canvas memory grows with page count.
+
+For long documents, set `<r-preview pdf-mode="virtual" src="/long.pdf">`.
+Virtual mode maintains page-height placeholders and renders the viewport plus a
+buffer, retaining at most six canvases. Scrolling and container resizing repaint
+as needed. Its PDF worker remains alive until the preview closes, its source
+changes or the element disconnects. Errors after initial `load` emit `error`.
+
+`document.createElement('r-preview')` exposes the full TypeScript element API.
+Manual registration may return an unrelated constructor when a host already owns
+the tag; narrow its result with `isPreviewConstructor` before constructing a viewer:
+
+```ts
+import { registerPreview, isPreviewConstructor } from '@ranui/preview/manual';
+const Preview = await registerPreview('app-file-preview');
+if (isPreviewConstructor(Preview)) {
+  const element = new Preview();
+  element.pdfMode = 'virtual';
+  document.body.append(element);
+}
+```
 
 ## Intranet and offline deployment
 
@@ -115,6 +145,10 @@ component makes no request to the remote Office editor.
 
 ## Compatibility and migration
 
+0.3.0 preserves eager PDF completion and adds optional virtual rendering. UI and
+read-only changes preserve the active Office editor. The unused production `ranui`
+dependency and obsolete style transformer have been removed.
+
 0.2.0 preserves automatic `r-preview` registration and existing URL attributes,
 while adding manual registration and opt-in read-only behavior. It replaces
 vendored PDF.js 3.2 with 6.4 and corrects page numbering, completion, failures and
@@ -134,6 +168,7 @@ pnpm exec playwright install
 pnpm typecheck
 pnpm format:check
 pnpm test
+pnpm test:release
 pnpm build
 pnpm test:package
 ```
@@ -141,10 +176,14 @@ pnpm test:package
 Package verification installs the actual tarball in an isolated consumer and
 checks strict TypeScript, manual SSR imports, public exports and PDF assets.
 GitHub CI runs browser regressions and packaging checks. A stable GitHub release
-`v0.2.0` runs the release checks and publishes the exact verified tarball through
-npm trusted publishing. Configure `@ranui/preview` for repository `ranuts/fileview`,
+`v0.3.0` runs the release checks and publishes the exact verified tarball through
+npm trusted publishing. A release manifest records its SHA-512 integrity. Retrying
+publishing skips an already published version only when registry integrity matches;
+a mismatch fails. Manual retries verify the release tag's package inputs while
+allowing workflow-only recovery fixes. Configure `@ranui/preview` for repository `ranuts/fileview`,
 workflow `release.yml`, environment `npm`, and allow direct `npm publish`.
 
-Live Office checks and release coverage: [verification report](docs/verification-0.2.0.md).
+Live Office checks and release coverage: [0.3.0 verification report](docs/verification-0.3.0.md)
+and [0.2.0 report](docs/verification-0.2.0.md).
 
 See [CHANGELOG.md](CHANGELOG.md). Licensed under [AGPL-3.0](LICENSE).

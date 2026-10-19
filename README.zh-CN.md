@@ -8,7 +8,7 @@
 ## 安装和自动注册
 
 ```sh
-npm install @ranui/preview@0.2.0
+npm install @ranui/preview@0.3.0
 ```
 
 ```ts
@@ -51,19 +51,21 @@ vue({ template: { compilerOptions: { isCustomElement: (tag) => tag === 'app-file
 
 ## API
 
-| 属性                  | 默认值                      | 行为                                                                          |
-| --------------------- | --------------------------- | ----------------------------------------------------------------------------- |
-| `src`                 | 无                          | PDF、DOCX、PPTX、XLSX、XLS 文件 URL；赋值后打开预览                           |
-| `baseUrl` / `baseurl` | `https://edit.chaxus.com`   | Office 编辑器页面地址，可以带路径和查询参数                                   |
-| `readonly`            | false                       | 显式启用 Office 只读模式；空属性或 JS 属性 true 启用，`readonly="false"` 关闭 |
-| `closeable`           | 启用                        | `closeable="false"` 隐藏关闭按钮，同时禁用 Escape 关闭                        |
-| `label`               | 触发元素文字或 Preview file | 触发元素的无障碍名称                                                          |
+| 属性                   | 默认值                      | 行为                                                                          |
+| ---------------------- | --------------------------- | ----------------------------------------------------------------------------- |
+| `src`                  | 无                          | PDF、DOCX、PPTX、XLSX、XLS 文件 URL；赋值后打开预览                           |
+| `baseUrl` / `baseurl`  | `https://edit.chaxus.com`   | Office 编辑器页面地址，可以带路径和查询参数                                   |
+| `readonly`             | false                       | 显式启用 Office 只读模式；空属性或 JS 属性 true 启用，`readonly="false"` 关闭 |
+| `closeable`            | 启用                        | `closeable="false"` 隐藏关闭按钮，同时禁用 Escape 关闭                        |
+| `pdfMode` / `pdf-mode` | `eager`                     | PDF 全页渲染，或显式设置 `virtual` 按可见区域渲染                             |
+| `label`                | 触发元素文字或 Preview file | 触发元素的无障碍名称                                                          |
 
 `src`、`label`、`baseUrl`、`closeable` 保留原来的字符串属性约定；新增的
-`readonly` 是布尔 JavaScript 属性。注册完成前可以使用 HTML 属性。
+`readonly` 是布尔 JavaScript 属性；`pdfMode` 接受 `eager` 或 `virtual`。注册完成前可以使用 HTML 属性。
 元素升级完成后可调用 `showPreview()` 和 `closePreview()`。
 
-PDF 所有页面绘制完成，或 Office 编辑器确认打开成功后，触发一次 `load`。
+默认 PDF 所有页面绘制完成、虚拟模式首屏及缓冲区域绘制完成，或 Office
+编辑器确认打开成功后，触发一次 `load`。
 下载、格式或编辑器错误触发一次 `error`，其 `detail` 为错误对象。
 两个事件都可以冒泡并穿过 Shadow DOM。替换来源、关闭、移除元素会取消
 当前操作，旧操作不会再发完成事件。每个实例独立管理弹窗、iframe 和 worker。
@@ -81,8 +83,35 @@ Office 渲染由 iframe 部署负责。当前
 
 原来使用 `RENDER_OFFICE` 分块协议的自托管部署，在默认可编辑模式下继续
 兼容。旧编辑器没有只读接口时，不能保证真正只读，因此请求只读会明确提示
-升级部署。预览过程中修改 `readonly` 会按新的模式重新打开原文件。
+升级部署。预览过程中修改 `readonly` 通过 `document:set-readonly`
+更新当前编辑器，保留未保存的编辑内容；修改 `closeable` 只更新弹窗控件。
+模式切换失败会触发 `error`，并保留原有编辑器。
 只读约束的是编辑器的编辑行为，无法阻止拥有文件的用户下载或复制内容。
+
+## PDF 渲染与内存
+
+PDF 画布随容器宽度缩放。每页画布的 DPR 上限为 2，像素上限为 4,194,304，
+单边上限为 8,192 像素。超大页面会降低分辨率以限制单页分配；默认 `eager`
+模式仍在所有页面绘制完成后发出 `load`，总画布内存会随页数增加。
+
+长文档可以设置 `<r-preview pdf-mode="virtual" src="/long.pdf">`。
+虚拟模式保留页面高度占位，只绘制可见区域及缓冲区，同时最多保留六个画布；
+滚动和容器尺寸变化会按需重绘。worker 保留到关闭预览、替换来源或移除元素。
+首屏 `load` 之后的渲染失败仍会触发 `error`。
+
+`document.createElement('r-preview')` 现在具有完整的 TypeScript 元素接口。
+手动注册遇到已被宿主占用的标签时，可能返回其他组件的构造函数；创建实例前
+可以使用 `isPreviewConstructor` 判断：
+
+```ts
+import { registerPreview, isPreviewConstructor } from '@ranui/preview/manual';
+const Preview = await registerPreview('app-file-preview');
+if (isPreviewConstructor(Preview)) {
+  const element = new Preview();
+  element.pdfMode = 'virtual';
+  document.body.append(element);
+}
+```
 
 ## 内网和离线部署
 
@@ -106,6 +135,9 @@ PDF 预览不会创建 Office iframe；仅注册组件、放置未打开的组�
 
 ## 兼容与迁移
 
+0.3.0 保留默认 PDF 全页完成语义，新增可选虚拟渲染。弹窗控件与只读切换
+保留当前 Office 编辑器；移除了未使用的生产依赖 ranui 和旧样式转换插件。
+
 0.2.0 保留自动注册和现有 URL 属性，新增可选手动注册和只读模式。PDF.js
 由内置 3.2 升至 6.4，修复页码、重复页面、完成时机、失败处理和 worker 清理。
 CI 验证当前 Chromium、Firefox、WebKit；新引擎不再沿用未经验证的
@@ -122,16 +154,20 @@ pnpm exec playwright install
 pnpm typecheck
 pnpm format:check
 pnpm test
+pnpm test:release
 pnpm build
 pnpm test:package
 ```
 
 包验证会在隔离目录安装实际 tarball，检查严格 TypeScript、手动入口 SSR、
 公开入口和 PDF 资产。GitHub CI 执行浏览器回归与包验证。
-发布正式 GitHub Release `v0.2.0` 后，发布流程会验证并发布同一个 tarball。
-npm 可信发布配置为包 `@ranui/preview`、仓库 `ranuts/fileview`、工作流
+发布正式 GitHub Release `v0.3.0` 后，发布流程会验证并发布同一个 tarball。
+发布清单记录 SHA-512 完整性；重试时只有 registry 的同版本完整性匹配才会
+跳过发布，不匹配则失败。手动重试会核对 tag 的包输入文件，并允许仅工作流
+修复的恢复操作。npm 可信发布配置为包 `@ranui/preview`、仓库 `ranuts/fileview`、工作流
 `release.yml`、环境 `npm`，并允许直接 `npm publish`。
 
-真实 Office 测试与覆盖边界见[验证报告](docs/verification-0.2.0.md)。
+真实 Office 测试与覆盖边界见 [0.3.0 验证报告](docs/verification-0.3.0.md)
+和 [0.2.0 报告](docs/verification-0.2.0.md)。
 
 变更见 [CHANGELOG.md](CHANGELOG.md)，许可证为 [AGPL-3.0](LICENSE)。
