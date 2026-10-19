@@ -159,17 +159,17 @@ test('legacy transfer reads only the next acknowledged chunk and preserves the w
     };
     (window as any).transfer = renderOffice(file, {
       iframe,
-      url: new URL('/test/fixtures/hardening-legacy.html?pause', location.href),
+      url: new URL('/test/fixtures/hardening-legacy.html?pause&initDelay=200', location.href),
       readonly: false,
       signal: new AbortController().signal,
     });
   });
   const frame = () => page.frames().find((frame) => frame.url().includes('hardening-legacy'))!;
-  await expect.poll(async () => frame()?.evaluate(() => (window as any).chunks.length)).toBe(1);
+  await expect.poll(async () => frame()?.evaluate(() => (window as any).chunks?.length)).toBe(1);
   expect(await page.evaluate(() => (window as any).reads)).toBe(1);
   for (const count of [2, 3]) {
     await frame().evaluate(() => (window as any).releaseChunk());
-    await expect.poll(() => frame().evaluate(() => (window as any).chunks.length)).toBe(count);
+    await expect.poll(() => frame().evaluate(() => (window as any).chunks?.length)).toBe(count);
     expect(await page.evaluate(() => (window as any).reads)).toBe(count);
   }
   await frame().evaluate(() => (window as any).releaseChunk());
@@ -374,7 +374,7 @@ test('readonly enabled during the first legacy ACK stops before reading another 
     );
   });
   const frame = () => page.frames().find((frame) => frame.url().includes('hardening-legacy'))!;
-  await expect.poll(async () => frame()?.evaluate(() => (window as any).chunks.length)).toBe(1);
+  await expect.poll(async () => frame()?.evaluate(() => (window as any).chunks?.length)).toBe(1);
   await page.evaluate(() => (window as any).enableReadonly());
   await frame().evaluate(() => (window as any).releaseChunk());
   expect(await page.evaluate(() => (window as any).transfer)).toContain(
@@ -443,10 +443,10 @@ for (const size of [8, 32770]) {
     }, size);
     const frame = () => page.frames().find((frame) => frame.url().includes('hardening-legacy'))!;
     const count = size === 8 ? 1 : 3;
-    await expect.poll(async () => frame()?.evaluate(() => (window as any).chunks.length)).toBe(1);
+    await expect.poll(async () => frame()?.evaluate(() => (window as any).chunks?.length)).toBe(1);
     for (let expected = 2; expected <= count; expected++) {
       await frame().evaluate(() => (window as any).releaseChunk());
-      await expect.poll(() => frame().evaluate(() => (window as any).chunks.length)).toBe(expected);
+      await expect.poll(() => frame().evaluate(() => (window as any).chunks?.length)).toBe(expected);
     }
     await page.evaluate(() => (window as any).enableReadonly());
     await frame().evaluate(() => (window as any).releaseChunk());
