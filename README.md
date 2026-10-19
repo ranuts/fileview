@@ -2,174 +2,147 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-A powerful file preview component library that supports PDF and Office documents (DOCX, PPTX, XLSX, XLS) with a modern web interface.
+PDF and Office preview in a browser custom element. PDF rendering runs locally;
+Office files open in a configurable document editor iframe. No application account
+or conversion server is required by this package.
 
-## Features
+## Install and automatic registration
 
-- 📄 **PDF Preview**: Full PDF document rendering with zoom and navigation
-- 📊 **Office Documents**: Support for Microsoft Office formats
-  - Word documents (DOCX)
-  - PowerPoint presentations (PPTX)
-  - Excel spreadsheets (XLSX, XLS)
-- 🎨 **Modern UI**: Clean and responsive design with loading states
-- 🔧 **Customizable**: Configurable options for different use cases
-- 🚀 **Lightweight**: Optimized bundle size for better performance
-- 🛡️ **TypeScript**: Full TypeScript support with type definitions
-
-## Installation
-
-```bash
-npm install @ranui/preview
-# or
-pnpm add @ranui/preview
-# or
-yarn add @ranui/preview
+```sh
+npm install @ranui/preview@0.2.0
 ```
 
-## Quick Start
-
-### Basic Usage
+```ts
+import '@ranui/preview';
+await customElements.whenDefined('r-preview');
+```
 
 ```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>File Preview Demo</title>
-  </head>
-  <body>
-    <input type="file" id="fileInput" />
-    <r-preview id="preview"></r-preview>
-
-    <script type="module">
-      import '@ranui/preview';
-
-      const fileInput = document.getElementById('fileInput');
-      const preview = document.getElementById('preview');
-
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          const url = URL.createObjectURL(file);
-          preview.setAttribute('src', url);
-        }
-      });
-    </script>
-  </body>
-</html>
+<r-preview src="/reports/annual.pdf" label="Open annual report">Open report</r-preview>
 ```
 
-### Programmatic Usage
+Setting `src` on a connected element opens the dialog immediately. Clicking the
+trigger opens it again after closing. HTTP URLs require the usual browser CORS
+permissions. Blob URLs must carry a supported MIME type; release each object URL
+when replacing its source or disposing its owner.
 
-```javascript
-import { preview } from '@ranui/preview';
+## Manual registration and Vue
 
-// The component is automatically registered as a custom element
-// You can now use <r-preview> in your HTML
+The manual entry registers nothing on import and is safe to import during SSR.
+Call it on the client, before accessing the upgraded element's properties:
+
+```ts
+import { registerPreview } from '@ranui/preview/manual';
+await registerPreview('app-file-preview'); // defaults to r-preview
 ```
-
-## API Reference
-
-### Custom Element: `<r-preview>`
-
-#### Attributes
-
-| Attribute   | Type    | Default                   | Description                            |
-| ----------- | ------- | ------------------------- | -------------------------------------- |
-| `src`       | string  | -                         | File URL or blob URL to preview        |
-| `closeable` | boolean | false                     | Whether to show close button           |
-| `baseUrl`   | string  | 'https://edit.chaxus.com' | Base URL for Office document rendering |
-| `label`     | string  | -                         | Custom label for the preview           |
-
-#### Methods
-
-| Method           | Description                      |
-| ---------------- | -------------------------------- |
-| `showPreview()`  | Manually trigger preview display |
-| `closePreview()` | Close the preview modal          |
-
-#### Events
-
-| Event   | Description                            |
-| ------- | -------------------------------------- |
-| `load`  | Fired when file is successfully loaded |
-| `error` | Fired when file loading fails          |
-
-#### Migration note (versions ≤ 0.0.1-alpha-3)
-
-Older versions default `baseUrl` to `https://ranuts.github.io/document`, which is now only a redirect page — Office preview silently hangs on loading because postMessage is dropped after the cross-origin redirect. Upgrade to `0.1.0-alpha-1` or later; if you cannot upgrade yet, set the attribute explicitly:
 
 ```html
-<r-preview src="..." baseUrl="https://edit.chaxus.com"></r-preview>
+<app-file-preview src="/slides/deck.pptx" readonly>View slides</app-file-preview>
 ```
 
-### Supported File Types
+For Vue, configure the template compiler to treat your chosen tag as a custom
+component, then register it in client startup (or `onMounted`):
 
-- **PDF**: `application/pdf`
-- **Word**: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
-- **PowerPoint**: `application/vnd.openxmlformats-officedocument.presentationml.presentation`
-- **Excel**:
-  - `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (XLSX)
-  - `application/vnd.ms-excel` (XLS)
+```ts
+// vite.config.ts, with @vitejs/plugin-vue
+vue({ template: { compilerOptions: { isCustomElement: (tag) => tag === 'app-file-preview' } } });
+```
 
-## Development
+The existing root namespace (`import { preview } from '@ranui/preview'`),
+`@ranui/preview/preview` entry and UMD `ranui.preview` remain available.
 
-### Prerequisites
+## API
 
-- Node.js >= 23.10.0
-- pnpm (recommended)
+| Attribute / property  | Default                        | Behavior                                                                                                    |
+| --------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `src`                 | unset                          | PDF, DOCX, PPTX, XLSX or XLS URL; setting it opens the preview                                              |
+| `baseUrl` / `baseurl` | `https://edit.chaxus.com`      | Office editor deployment URL, including a path/query if needed                                              |
+| `readonly`            | false                          | Opt-in Office read-only mode; empty attribute or property `true` enables it; `readonly="false"` disables it |
+| `closeable`           | enabled                        | Set `closeable="false"` to hide the close control and disable Escape dismissal                              |
+| `label`               | trigger text or “Preview file” | Accessible name of the trigger                                                                              |
 
-### Setup
+`src`, `label`, `baseUrl` and `closeable` retain their string property contracts;
+`readonly` is a boolean property. Use attributes before registration completes.
+Call `showPreview()` or `closePreview()` after upgrading the element.
 
-```bash
-# Clone the repository
-git clone https://github.com/ranuts/fileview.git
-cd fileview
+`load` fires once when all PDF pages finish painting or the Office editor confirms
+opening. `error` fires once on a download, unsupported format or renderer error;
+its `detail` contains the error. Both events bubble and cross shadow boundaries.
+Replacing the source, closing or disconnecting cancels the active operation and
+suppresses its obsolete events. Each element owns its dialog, iframe and worker.
 
-# Install dependencies
-pnpm install
+Dialogs support Enter/Space activation, Escape dismissal, close-button focus,
+focus restoration and a visible keyboard focus indicator. Mobile sizing accounts
+for dynamic viewports and safe areas.
 
-# Start development server
-pnpm dev
+## Office renderer and read-only mode
 
-# Build for production
-pnpm build
+Office rendering belongs to the iframe deployment, not PDF.js. The current
+[document project](https://github.com/ranuts/document) exposes the structured
+`document:*` embed API: fileview probes `document:get-state`, sends
+`document:open-file` with a browser `File` and the requested `readonly` flag, then
+waits for the correlated `document:opened` or `document:error` response. It accepts
+messages only from that iframe and its configured origin.
 
-# Run tests
+Existing deployments using the `RENDER_OFFICE` chunk protocol remain supported
+in the default editable mode. An old renderer without the embed API cannot
+promise enforced read-only mode: requesting it returns an explicit error asking
+you to update the deployment. Updating `readonly` while open reloads the file in
+the requested mode. This controls editing in the renderer; it does not prevent
+users from downloading or copying bytes they already have access to.
+
+## Intranet and offline deployment
+
+- **PDF:** serve the installed package's complete `dist` directory. Its bundled
+  PDF.js API/worker and `dist/pdfjs/{cmaps,standard_fonts,wasm}` assets stay local.
+  Preserve these relative paths when copying or deploying the package. A bundler
+  that relocates its JavaScript must also copy `pdfjs/` beside the emitted ES
+  entry (one directory above `umd/` for UMD). No PDF CDN is contacted.
+- **Office:** deploy the document editor's complete static distribution inside
+  your network, including its WASM engine, Office editor scripts, fonts and other
+  assets. Set `baseUrl="https://office.internal.example/editor"` to that page.
+  A URL containing only a WASM binary is not an Office rendering page. Replacing
+  `baseUrl` does not copy or proxy the editor's dependencies for you.
+- Host the preview page, input files and editor assets on reachable intranet
+  HTTP(S) origins. Allow iframe embedding and the necessary CORS requests. For
+  PDF workers, CSP must permit `worker-src blob:`; serve `.wasm` with
+  `application/wasm`. Review your renderer's own CSP requirements as well.
+- Files sent to a remote Office `baseUrl` become available to that iframe. Use
+  your own deployment when files must stay inside your network.
+
+Default PDF preview never creates an Office iframe. Merely registering an idle
+component makes no request to the remote Office editor.
+
+## Compatibility and migration
+
+0.2.0 preserves automatic `r-preview` registration and existing URL attributes,
+while adding manual registration and opt-in read-only behavior. It replaces
+vendored PDF.js 3.2 with 6.4 and corrects page numbering, completion, failures and
+worker cleanup. Use current evergreen Chromium, Firefox and WebKit; these engines
+are exercised in CI. Earlier claimed Chrome 88 / Safari 14 support is not verified
+for the new PDF engine. Node.js 24+ is required for development/build tooling.
+
+If an older application still uses `https://ranuts.github.io/document`, replace
+that redirect URL with the final renderer URL. Cross-origin redirects break the
+origin-pinned messaging contract.
+
+## Development and release
+
+```sh
+pnpm install --frozen-lockfile  # pnpm 11.6.0, Node 24+
+pnpm exec playwright install
+pnpm typecheck
+pnpm format:check
 pnpm test
+pnpm build
+pnpm test:package
 ```
 
-### Scripts
+Package verification installs the actual tarball in an isolated consumer and
+checks strict TypeScript, manual SSR imports, public exports and PDF assets.
+GitHub CI runs browser regressions and packaging checks. A stable GitHub release
+`v0.2.0` runs the release checks and publishes the exact verified tarball through
+npm trusted publishing. Configure `@ranui/preview` for repository `ranuts/fileview`,
+workflow `release.yml`, environment `npm`, and allow direct `npm publish`.
 
-- `pnpm dev` - Start development server with hot reload
-- `pnpm build` - Build for production
-- `pnpm test` - Run test suite
-- `pnpm test:ui` - Run tests with UI
-- `pnpm test:report` - Show test report
-
-## Browser Support
-
-- Chrome >= 88
-- Firefox >= 85
-- Safari >= 14
-- Edge >= 88
-
-## License
-
-AGPL-3.0 License - see [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## Related Projects
-
-- [ranui](https://github.com/ranuts/ranui) - Modern UI component library
-- [ranuts](https://github.com/ranuts/ranuts) - Utility library
-
-## Support
-
-If you encounter any issues or have questions, please [open an issue](https://github.com/ranuts/fileview/issues) on GitHub.
+See [CHANGELOG.md](CHANGELOG.md). Licensed under [AGPL-3.0](LICENSE).

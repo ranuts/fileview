@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0
+
+- Restore bubbling, composed `load` and `error` events; emit only for the current operation.
+- Add passive, SSR-safe manual registration with an optional custom element name.
+- Add opt-in Office read-only mode through the document embed API, retaining legacy editable renderer support.
+- Isolate dialogs, network requests, Office connections and PDF workers per instance; cancel obsolete loads on source replacement, close and disconnect.
+- Add accessible dialog controls, keyboard activation, focus restoration and mobile safe-area/dynamic viewport sizing.
+- Upgrade ranui/ranuts to 0.5.0 and PDF.js to 6.4.299; correct PDF page numbering, completion, errors, pixel density and cleanup.
+- Ship PDF workers, fonts, cMaps and WASM assets for local deployment.
+- Update Node 24+ tooling, strict installed-package type checks, browser regressions and CI/trusted-publishing workflows.
+- Document Vue registration, configurable Office hosts, offline deployment and migration limitations.
+
 ## 0.1.0-alpha-3 (2026-08-08)
 
 ### Changed
