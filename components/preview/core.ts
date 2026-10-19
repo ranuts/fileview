@@ -103,6 +103,7 @@ export class PreviewElement extends HTMLElement {
     if (opened.at(-1) !== this) return;
     if (event.key === 'Escape' && this.closeable !== 'false') {
       event.preventDefault();
+      event.stopImmediatePropagation();
       this.closePreview();
     } else if (event.key === 'Tab' && this.modal) {
       const controls = Array.from(this.modal.querySelectorAll<HTMLElement>('button, iframe, [tabindex="0"]'));
@@ -204,6 +205,8 @@ export class PreviewElement extends HTMLElement {
           : this;
     this.context!.replaceChildren();
     this.modal!.style.display = 'block';
+    // Keep paint order aligned with the keyboard stack when an older instance reopens.
+    document.body.append(this.modal!);
     this.updateCloseButton();
     this.createLoading();
     const previousIndex = opened.indexOf(this);
