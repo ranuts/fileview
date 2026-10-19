@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Controlled Office renderer</title>
+  </head>
+  <body>
+    <script type="module">
+      import { MessageCodec, Platform } from 'ranuts/utils';
+      const chunks = [];
+      Platform.init({
+        async RENDER_OFFICE(chunk) {
+          chunks.push(chunk);
+          if (chunks.length === chunk.totalChunks) {
+            const file = await MessageCodec.decodeFileChunked(chunks);
+            document.body.textContent = file.name;
+          }
+          return { success: true };
+        },
+      });
+    </script>
+  </body>
+</html>
