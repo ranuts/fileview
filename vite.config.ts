@@ -1,10 +1,9 @@
 import path, { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
-import type { BuildOptions, PluginOption, UserConfig } from 'vite';
-import { visualizer } from 'rollup-plugin-visualizer';
-import loadStyle from './plugins/load-style';
-import { PORT } from './build/config';
+import type { BuildOptions, UserConfig } from 'vite';
+import loadStyle from './plugins/load-style.ts';
+import { PORT } from './build/config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -36,6 +35,7 @@ const chunkOptimization: Partial<chunkOptimization> = {
 export const umd: BuildOptions = {
   ...chunkOptimization,
   outDir: resolve(__dirname, 'dist/umd'),
+  emptyOutDir: false,
   lib: {
     entry: resolve(__dirname, 'index.ts'),
     name: 'ranui',
@@ -46,8 +46,11 @@ export const umd: BuildOptions = {
 
 export const es: BuildOptions = {
   ...chunkOptimization,
+  outDir: resolve(__dirname, 'dist'),
+  emptyOutDir: false,
   lib: {
     entry: {
+      manual: resolve(__dirname, 'manual.ts'),
       preview: resolve(__dirname, 'components/preview/index.ts'),
       index: resolve(__dirname, 'index.ts'),
     },
@@ -59,6 +62,9 @@ export const es: BuildOptions = {
 };
 
 export const viteConfig: UserConfig = {
+  define: {
+    __FILEVIEW_PDF_ASSET_BASE__: JSON.stringify('/node_modules/pdfjs-dist/'),
+  },
   optimizeDeps: {
     exclude: ['public'],
   },
@@ -66,10 +72,6 @@ export const viteConfig: UserConfig = {
     loadStyle({
       ignore: ['ranui/components/modal/index.ts'],
     }),
-    visualizer({
-      emitFile: false,
-      filename: 'report/build-stats.html',
-    }) as PluginOption,
   ],
   resolve: {
     alias: {

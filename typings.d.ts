@@ -1,64 +1,38 @@
-declare module '*.less';
-declare module '*.less?inline';
-declare module '*.ts';
-declare module '*.svg';
-declare module '@/assets/*';
-declare module '@/public/*';
-declare module '@/components/*';
-declare module '@/plugins/*';
-
-interface Viewport {
-  width: number;
-  height: number;
-  viewBox: Array<number>;
-}
-interface RenderContext {
-  canvasContext: CanvasRenderingContext2D | null;
-  transform: Array<number>;
-  viewport: Viewport;
-}
-
-interface PDFPageProxy {
-  pageNumber: number;
-  getViewport: () => Viewport;
-  render: (options: RenderContext) => void;
+/** Attributes supported by the r-preview custom element. React is optional. */
+export interface PreviewAttributes {
+  src?: string;
+  closeable?: boolean | string;
+  readonly?: boolean | string;
+  baseUrl?: string;
+  baseurl?: string;
+  label?: string;
+  id?: string;
+  class?: string;
+  className?: string;
+  slot?: string;
+  title?: string;
+  role?: string;
+  tabIndex?: number;
+  children?: unknown;
+  [attribute: string]: unknown;
+  [attribute: `aria-${string}`]: string | number | boolean | undefined;
+  [attribute: `data-${string}`]: string | number | boolean | undefined;
 }
 
-interface PDFDocumentProxy {
-  numPages: number;
-  getPage: (x: number) => Promise<PDFPageProxy>;
-}
-
-interface Window {
-  ranui: Partial<Ranui>;
-  message: Partial<Ran.Message>;
-  MathJax: MathJax;
-  katex: {
-    render: (x: string, y: HTMLElement, z: object) => void;
-  };
-  pdfjsLib: {
-    GlobalWorkerOptions: {
-      workerSrc: string;
-    };
-    getDocument: (x: string | ArrayBuffer) => {
-      promise: Promise<PDFDocumentProxy>;
-    };
-  };
-}
-
-interface BaseIntrinsicElements {
-  'r-preview': any & {
-    src: string;
-    closeable: boolean | string;
-    baseUrl: string;
-  };
-}
-namespace JSX {
-  interface IntrinsicElements extends BaseIntrinsicElements {}
-}
-
-namespace React {
+declare global {
+  interface HTMLElementTagNameMap {
+    'r-preview': HTMLElement;
+  }
   namespace JSX {
-    interface IntrinsicElements extends BaseIntrinsicElements {}
+    interface IntrinsicElements {
+      'r-preview': PreviewAttributes;
+    }
+  }
+  namespace React {
+    namespace JSX {
+      interface IntrinsicElements {
+        'r-preview': PreviewAttributes;
+      }
+    }
   }
 }

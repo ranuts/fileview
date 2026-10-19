@@ -1,7 +1,7 @@
 {
   "name": "@ranui/preview",
-  "version": "0.1.0-alpha-3",
-  "description": "ranui preview",
+  "version": "0.2.0",
+  "description": "Browser-native PDF and Office file preview with configurable self-hosted rendering",
   "main": "dist/umd/index.umd.cjs",
   "module": "dist/index.js",
   "type": "module",
@@ -11,71 +11,89 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ranuts/fileview"
+    "url": "git+https://github.com/ranuts/fileview.git"
   },
   "author": "chaxus",
   "engines": {
-    "node": ">=23.10.0"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "vite --host",
-    "build": "sh ./bin/build.sh",
+    "build": "node ./scripts/build.mjs",
     "build:es": "vite build -c ./build/config.es.ts",
     "build:umd": "vite build -c ./build/config.umd.ts",
-    "prepublish": "npm run build",
-    "test": "sh ./bin/test.sh",
+    "test": "playwright test",
     "test:report": "playwright show-report",
     "test:ui": "playwright test --ui",
     "test:update": "playwright test --update-snapshots",
     "tsc": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "format:check": "prettier --check .",
+    "test:package": "node ./scripts/verify-package.mjs",
+    "prepack": "npm run build"
   },
   "files": [
-    "dist",
-    "typings.d.ts"
+    "dist"
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/umd/index.umd.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/umd/index.d.cts",
+        "default": "./dist/umd/index.umd.cjs"
+      }
     },
     "./preview": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/preview.js",
-      "require": "./dist/umd/index.umd.cjs"
+      "import": {
+        "types": "./dist/components/preview/index.d.ts",
+        "default": "./dist/preview.js"
+      },
+      "require": {
+        "types": "./dist/umd/index.d.cts",
+        "default": "./dist/umd/index.umd.cjs"
+      }
     },
     "./type": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "types": "./dist/components/preview/types.d.ts",
+      "default": "./dist/type.js"
     },
     "./typings": {
       "types": "./dist/typings.d.ts",
-      "import": "./dist/typings.d.ts",
-      "require": "./dist/index.js"
+      "default": "./dist/typings.js"
     },
     "./dist/*": {
       "types": "./dist/*",
       "import": "./dist/*",
       "require": "./dist/*"
-    }
+    },
+    "./manual": {
+      "types": "./dist/manual.d.ts",
+      "import": "./dist/manual.js"
+    },
+    "./package.json": "./package.json"
   },
   "keywords": [],
   "license": "AGPL-3.0",
   "devDependencies": {
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.64.1",
     "@types/react": "19.2.17",
-    "less": "4.6.7",
-    "prettier": "3.9.5",
-    "rollup-plugin-visualizer": "7.0.1",
-    "terser": "5.49.0",
-    "tsx": "4.23.0",
+    "less": "4.9.1",
+    "prettier": "3.9.10",
+    "terser": "5.51.2",
+    "tsx": "4.23.15",
     "typescript": "7.0.2",
-    "vite": "8.1.4"
+    "vite": "8.3.4",
+    "@types/node": "26.6.5",
+    "pdfjs-dist": "6.4.299",
+    "publint": "0.3.25"
   },
   "dependencies": {
-    "ranui": "0.4.2-alpha.2",
-    "ranuts": "0.4.0-alpha.2"
-  }
+    "ranui": "0.5.0",
+    "ranuts": "0.5.0"
+  },
+  "packageManager": "pnpm@11.6.0"
 }

@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["index.ts", "manual.ts", "components/**/*.ts", "utils/**/*.ts", "typings.d.ts", "build/assets.d.ts"],
+  "exclude": ["node_modules", "dist", "test", "plugins", "public", "assets"],
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "inlineSourceMap": false,
+    "rootDir": ".",
+    "outDir": "dist"
+  }
+}

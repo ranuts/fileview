@@ -6,3 +6,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - ranui
   - ranuts
+  - '@alixex/ranview@0.2.0'
