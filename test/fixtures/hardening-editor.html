@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Stateful embed API fixture</title>
+  <body>
+    <input aria-label="Unsaved document text" value="Original" />
+    <script>
+      const params = new URLSearchParams(location.search);
+      const readyAt = performance.now() + Number(params.get('readyDelay') || 0);
+      const state = { readonly: false, hasDocument: false, dirty: false };
+      const commands = [];
+      window.commands = commands;
+      window.state = state;
+      window.opens = 0;
+      const input = document.querySelector('input');
+      input.addEventListener('input', () => (state.dirty = true));
+      addEventListener('message', (event) => {
+        if (event.source !== parent || event.origin !== location.origin) return;
+        const { id, type, payload } = event.data || {};
+        if (type === 'document:get-state' && performance.now() >= readyAt)
+          parent.postMessage({ id, type: 'document:state', payload: state }, event.origin);
+        if (type === 'document:open-file') {
+          window.opens++;
+          state.readonly = payload.readonly;
+          state.hasDocument = true;
+          input.readOnly = state.readonly;
+          input.value = payload.file.name;
+          setTimeout(
+            () => parent.postMessage({ id, type: 'document:opened', payload: state }, event.origin),
+            Number(params.get('openDelay') || 0),
+          );
+        }
+        if (type === 'document:set-readonly') {
+          commands.push(payload.readonly);
+          window.pendingId = id;
+          setTimeout(
+            () => {
+              if (params.has('reject')) {
+                parent.postMessage(
+                  { id, type: 'document:error', payload: { message: 'Mode change rejected' } },
+                  event.origin,
+                );
+                return;
+              }
+              state.readonly = payload.readonly;
+              input.readOnly = state.readonly;
+              parent.postMessage({ id, type: 'document:readonly-changed', payload: state }, event.origin);
+            },
+            Number(params.get('commandDelay') || 0),
+          );
+        }
+      });
+      if (!params.has('probeOnly'))
+        setTimeout(
+          () => parent.postMessage({ type: 'document:ready' }, location.origin),
+          Number(params.get('readyDelay') || 0),
+        );
+    </script>
+  </body>
+</html>
