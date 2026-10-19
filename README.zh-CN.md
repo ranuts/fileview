@@ -132,4 +132,6 @@ pnpm test:package
 npm 可信发布配置为包 `@ranui/preview`、仓库 `ranuts/fileview`、工作流
 `release.yml`、环境 `npm`，并允许直接 `npm publish`。
 
+真实 Office 测试与覆盖边界见[验证报告](docs/verification-0.2.0.md)。
+
 变更见 [CHANGELOG.md](CHANGELOG.md)，许可证为 [AGPL-3.0](LICENSE)。
