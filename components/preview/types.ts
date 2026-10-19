@@ -5,6 +5,7 @@ export interface BaseReturn<T = unknown> {
 }
 
 export interface RenderOptions {
+  signal?: AbortSignal;
   dom?: HTMLElement;
   onError?: (msg?: BaseReturn) => void;
   onLoad?: (msg?: BaseReturn) => void;
