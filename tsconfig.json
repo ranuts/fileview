@@ -1,6 +1,14 @@
 {
   "include": ["components", "plugins", "utils", "**/*.ts"],
-  "exclude": ["node_modules/**", "dist/**", "assets", "public"],
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    "assets",
+    "public",
+    "test/package-consumer.ts",
+    "test/package-consumer.cts",
+    "test/package-react.tsx"
+  ],
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -24,6 +32,7 @@
       "@/components/*": ["./components/*"],
       "@/plugins/*": ["./plugins/*"],
       "@/utils/*": ["./utils/*"]
-    }
+    },
+    "allowImportingTsExtensions": true
   }
 }

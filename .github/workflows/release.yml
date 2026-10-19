@@ -1,0 +1,78 @@
+name: Publish npm release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.6.0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Validate stable release version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          assert.match(version, /^\d+\.\d+\.\d+$/);
+          assert.equal(process.env.RELEASE_TAG, `v${version}`);
+          NODE
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm format:check
+      - run: pnpm exec playwright install --with-deps
+      - run: pnpm test
+      - run: pnpm build
+      - name: Pack and verify the release artifact
+        run: pnpm test:package --out-dir artifacts
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-tarball
+          path: artifacts/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-tarball
+          path: artifacts
+      - name: Publish the verified tarball through npm trusted publishing
+        run: |
+          set -eu
+          set -- artifacts/*.tgz
+          [ "$#" -eq 1 ]
+          [ -f "$1" ]
+          npm publish "$1" --ignore-scripts --access public --provenance --tag latest

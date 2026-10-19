@@ -1,5 +1,5 @@
-bin=./node_modules/.bin
-npm run tsc
-$bin/playwright install
-$bin/playwright install-deps
-$bin/playwright test
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+./node_modules/.bin/tsc --noEmit
+exec ./node_modules/.bin/playwright test "$@"
