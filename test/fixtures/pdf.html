@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>PDF renderer regression fixture</title>
+  </head>
+  <body>
+    <div id="pages" style="width: 240px"></div>
+    <script type="module">
+      import { renderPdf } from '../../components/preview/pdf.ts';
+      window.renderPdf = renderPdf;
+    </script>
+  </body>
+</html>
