@@ -145,4 +145,6 @@ GitHub CI runs browser regressions and packaging checks. A stable GitHub release
 npm trusted publishing. Configure `@ranui/preview` for repository `ranuts/fileview`,
 workflow `release.yml`, environment `npm`, and allow direct `npm publish`.
 
+Live Office checks and release coverage: [verification report](docs/verification-0.2.0.md).
+
 See [CHANGELOG.md](CHANGELOG.md). Licensed under [AGPL-3.0](LICENSE).
