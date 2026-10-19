@@ -1,8 +1,11 @@
+import type { PreviewElement } from './components/preview/core.js';
+
 /** Attributes supported by the r-preview custom element. React is optional. */
 export interface PreviewAttributes {
   src?: string;
   closeable?: boolean | string;
   readonly?: boolean | string;
+  'pdf-mode'?: 'eager' | 'virtual';
   baseUrl?: string;
   baseurl?: string;
   label?: string;
@@ -21,7 +24,7 @@ export interface PreviewAttributes {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'r-preview': HTMLElement;
+    'r-preview': PreviewElement;
   }
   namespace JSX {
     interface IntrinsicElements {

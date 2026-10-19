@@ -4,6 +4,5 @@ allowBuilds:
 # published alphas install immediately. Versioned entries don't satisfy the
 # pre-run lockfile verification — bare names are required.
 minimumReleaseAgeExclude:
-  - ranui
   - ranuts
   - '@alixex/ranview@0.2.0'

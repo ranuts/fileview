@@ -2,7 +2,6 @@ import path, { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import type { BuildOptions, UserConfig } from 'vite';
-import loadStyle from './plugins/load-style.ts';
 import { PORT } from './build/config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,11 +67,6 @@ export const viteConfig: UserConfig = {
   optimizeDeps: {
     exclude: ['public'],
   },
-  plugins: [
-    loadStyle({
-      ignore: ['ranui/components/modal/index.ts'],
-    }),
-  ],
   resolve: {
     alias: {
       '@/components': resolve(__dirname, 'components/'),
